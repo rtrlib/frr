@@ -34,7 +34,9 @@
 #include "rtrlib/rtrlib.h"
 #include "rtrlib/lib/ip.h"
 #include "rtrlib/transport/tcp/tcp_transport.h"
+#if defined(FOUND_SSH)
 #include "rtrlib/transport/ssh/ssh_transport.h"
+#endif
 
 #include "bgpd/bgpd.h"
 #include "bgpd/bgp_table.h"
@@ -121,6 +123,7 @@ delete_cache(void* value)
     }
   else
     {
+#if defined(FOUND_SSH)
       XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config->host);
       XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config->username);
       XFREE(MTYPE_BGP_RPKI_CACHE,
@@ -128,6 +131,7 @@ delete_cache(void* value)
       XFREE(MTYPE_BGP_RPKI_CACHE,
           cache_p->tr_config.ssh_config->server_hostkey_path);
       XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config);
+#endif
     }
   XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->rtr_socket->tr_socket);
   XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->rtr_socket);
@@ -190,6 +194,7 @@ find_cache(struct list* cache_list, const char* host, const char* port_string,
         }
       else
         {
+#if defined(FOUND_SSH)
           if (strcmp(cache->tr_config.ssh_config->host, host) == 0)
             {
               if (port != 0)
@@ -201,6 +206,8 @@ find_cache(struct list* cache_list, const char* host, const char* port_string,
                 }
               return cache;
             }
+#endif
+	  break;
         }
     }
   return NULL ;
@@ -240,7 +247,7 @@ add_ssh_cache(struct list* cache_list, const char* host,
     const char* client_privkey_path, const char* client_pubkey_path,
     const char* server_pubkey_path)
 {
-
+#if defined(FOUND_SSH)
   struct tr_ssh_config* ssh_config_p;
   struct tr_socket* tr_socket_p;
   cache* cache_p;
@@ -281,6 +288,8 @@ add_ssh_cache(struct list* cache_list, const char* host,
   cache_p->type = SSH;
   listnode_add(cache_list, cache_p);
   return SUCCESS;
+#endif
+  return ERROR;
 }
 
 static void
@@ -403,12 +412,14 @@ rpki_config_write(struct vty * vty)
                 break;
 
               case SSH:
+#if defined(FOUND_SSH)
                 ssh_config = cache->tr_config.ssh_config;
                 vty_out(vty, "    rpki cache %s %u %s %s %s \n",
                     ssh_config->host, ssh_config->port, ssh_config->username,
                     ssh_config->client_privkey_path,
                     ssh_config->server_hostkey_path != NULL ?
-                        ssh_config->server_hostkey_path : " ");
+                        ssh_config->server_hostkey_path : " ", VTY_NEWLINE);
+#endif
                 break;
 
               default:
@@ -565,7 +576,7 @@ DEFUN (rpki_group,
   VTY_GET_INTEGER("group preference", group_preference, argv[0]);
   // Select group for further configuration
   currently_selected_cache_group = find_cache_group(group_preference);
-  
+
   // Group does not yet exist so create new one
   if (currently_selected_cache_group == NULL )
     {
@@ -635,19 +646,27 @@ DEFUN (rpki_cache,
   // use ssh connection
   if (argc == 5)
     {
+      // return_value is ERROR on default if
+      // there is no SSH support. Unexpected behavior!!!
+      return_value = ERROR;
+#if defined(FOUND_SSH)
       int port;
       VTY_GET_INTEGER("rpki cache ssh port", port, argv[1]);
       return_value = add_ssh_cache(
           currently_selected_cache_group->cache_config_list, argv[0], port,
           argv[2], argv[3], argv[4], NULL );
+#endif
     }
   else if (argc == 6)
     {
+      return_value = ERROR;
+#if defined(FOUND_SSH)
       unsigned int port;
       VTY_GET_INTEGER("rpki cache ssh port", port, argv[1]);
       return_value = add_ssh_cache(
           currently_selected_cache_group->cache_config_list, argv[0], port,
           argv[2], argv[3], argv[4], argv[5]);
+#endif
     }
   // use tcp connection
   else if (argc == 2)
@@ -831,9 +850,16 @@ DEFUN (show_rpki_cache_connection,
                     break;
 
                   case SSH:
+#if defined(FOUND_SSH)
                     ssh_config = cache->tr_config.ssh_config;
+<<<<<<< HEAD
                     vty_out(vty, "  rpki cache %s %u \n", ssh_config->host,
                         ssh_config->port);
+=======
+                    vty_out(vty, "  rpki cache %s %u %s", ssh_config->host,
+                        ssh_config->port, VTY_NEWLINE);
+#endif
+>>>>>>> 280b5846... Build Quagga without SSH support of RTRlib
                     break;
 
                   default:
