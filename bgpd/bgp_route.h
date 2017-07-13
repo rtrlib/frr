@@ -172,6 +172,9 @@ struct bgp_info
   u_int32_t addpath_rx_id;
   u_int32_t addpath_tx_id;
 
+  /*RPKI Route origin validation status*/
+  u_char rpki_validation_status;
+
 };
 
 /* BGP static route configuration. */

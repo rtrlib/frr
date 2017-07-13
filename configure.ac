@@ -324,6 +324,8 @@ AC_ARG_ENABLE([protobuf],
   AS_HELP_STRING([--enable-protobuf], [Enable experimental protobuf support]))
 AC_ARG_ENABLE([oldvpn_commands],
   AS_HELP_STRING([--enable-oldvpn-commands], [Keep old vpn commands]))
+AC_ARG_ENABLE(rpki,
+  AS_HELP_STRING([--enable-rpki], [enable RPKI prefix validation support]))
 
 AC_CHECK_HEADERS(json-c/json.h)
 AC_CHECK_LIB(json-c, json_object_get, LIBS="$LIBS -ljson-c")
@@ -1828,6 +1830,25 @@ AC_SUBST(CFG_SBIN)
 AC_SUBST(CFG_STATE)
 AC_SUBST(CFG_MODULE)
 AC_DEFINE_UNQUOTED(MODULE_PATH, "$CFG_MODULE", path to modules)
+
+dnl ------------------------------------
+dnl Enable RPKI and add librtr to libs
+dnl ------------------------------------
+if test "${enable_rpki}" = "yes"; then
+  AC_CHECK_LIB(rtr, rtr_mgr_start,
+    [AC_CHECK_HEADERS(pthread.h,
+      [AC_DEFINE(HAVE_RPKI,1,Enable RPKI prefix validation for BGP)
+      RPKI=true
+      LIBS="$LIBS -lrtr"
+      CFLAGS="$CFLAGS -pthread"],
+      [RPKI=false 
+      AC_MSG_ERROR([libpthread was not found on your system, which is needed by rpki prefix validation.])]
+    )], 
+    [RPKI=false
+    AC_MSG_ERROR([librtr was not found on your system, which is needed by rpki prefix validation.])]
+  )
+fi
+AM_CONDITIONAL([HAVE_RPKI], test "x$RPKI" = "xtrue")
 
 dnl ---------------------------
 dnl Check htonl works correctly
