@@ -75,15 +75,37 @@ extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t 
 /*****************************************/
 /** Declaration of private functions    **/
 /*****************************************/
-static void list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count);
-static void print_record(struct vty *vty, const struct lpfst_node* node);
-static void update_cb(struct pfx_table* p, const struct pfx_record rec, const bool added);
-static void ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest);
-static void revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix);
+//static void list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count);
+//static void print_record(struct vty *vty, const struct lpfst_node* node);
+//static void update_cb(struct pfx_table* p, const struct pfx_record rec, const bool added);
+//static void ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest);
+//static void revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix);
 
 /*****************************************/
 /** Implementation of public functions  **/
 /*****************************************/
+
+static void
+ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest)
+{
+    int i;
+    for (i = 0; i < 4; i++)
+    dest[i] = htonl(src[i]);
+}
+
+static void
+print_record(struct vty *vty, const struct lpfst_node* node)
+{
+  unsigned int i;
+  char ip[INET6_ADDRSTRLEN];
+  node_data* data = (node_data*) node->data;
+  for (i = 0; i < data->len; ++i)
+    {
+      ip_addr_to_str(&(node->prefix), ip, sizeof(ip));
+      vty_out(vty, "%-40s   %3u - %3u   %10u %s", ip, node->len,
+          data->ary[i].max_len, data->ary[i].asn, VTY_NEWLINE);
+    }
+}
 
 static void
 list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count)
@@ -126,7 +148,78 @@ rpki_is_running(void)
 {
   return rtr_is_running;
 }
+static void
+revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix)
+{
+  struct bgp_node *bgp_node;
+  struct bgp_info* bgp_info;
+  safi_t safi;
 
+  for (safi = SAFI_UNICAST; safi < SAFI_MAX; safi++)
+    {
+      bgp_node = bgp_node_lookup(bgp->rib[afi][safi], prefix);
+      if (bgp_node != NULL && bgp_node->info != NULL )
+        {
+          bool status_changed = false;
+          for (bgp_info = bgp_node->info; bgp_info; bgp_info = bgp_info->next)
+            {
+              u_char old_status = bgp_info->rpki_validation_status;
+              bgp_info->rpki_validation_status = rpki_validate_prefix(
+                  bgp_info->peer, bgp_info->attr, &bgp_node->p);
+              if (old_status != bgp_info->rpki_validation_status)
+                {
+                  status_changed = true;
+                }
+            }
+          if (status_changed)
+            {
+              bgp_process(bgp, bgp_node, afi, safi);
+            }
+        }
+    }
+}
+
+static void
+update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record rec,
+    const bool added __attribute__ ((unused)))
+{
+  struct bgp* bgp;
+  struct listnode* node;
+  struct prefix prefix;
+
+  if (!rpki_is_synchronized())
+    {
+      return;
+    }
+
+  for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp))
+    {
+      if (bgp_flag_check(bgp, BGP_FLAG_VALIDATE_DISABLE))
+        {
+          continue;
+        }
+      for (prefix.prefixlen = rec.min_len; prefix.prefixlen < rec.max_len;
+          ++prefix.prefixlen)
+        {
+          switch (rec.prefix.ver)
+            {
+            case LRTR_IPV4:
+              prefix.family = AFI_IP;
+              prefix.u.prefix4.s_addr = htonl(rec.prefix.u.addr4.addr);
+              revalidate_prefix(bgp, AFI_IP, &prefix);
+              break;
+            case LRTR_IPV6:
+              prefix.family = AFI_IP6;
+              ipv6_addr_to_network_byte_order(rec.prefix.u.addr6.addr,
+                  prefix.u.prefix6.s6_addr32);
+              revalidate_prefix(bgp, AFI_IP6, &prefix);
+              break;
+            default:
+              break;
+            }
+        }
+    }
+}
 static int
 rpki_init(void)
 {
@@ -406,105 +499,6 @@ rpki_revalidate_all_routes(struct bgp* bgp, afi_t afi)
             }
         }
     }
-}
-
-/*****************************************/
-/** Implementation of private functions **/
-/*****************************************/
-
-static void
-update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record rec,
-    const bool added __attribute__ ((unused)))
-{
-  struct bgp* bgp;
-  struct listnode* node;
-  struct prefix prefix;
-
-  if (!rpki_is_synchronized())
-    {
-      return;
-    }
-
-  for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp))
-    {
-      if (bgp_flag_check(bgp, BGP_FLAG_VALIDATE_DISABLE))
-        {
-          continue;
-        }
-      for (prefix.prefixlen = rec.min_len; prefix.prefixlen < rec.max_len;
-          ++prefix.prefixlen)
-        {
-          switch (rec.prefix.ver)
-            {
-            case LRTR_IPV4:
-              prefix.family = AFI_IP;
-              prefix.u.prefix4.s_addr = htonl(rec.prefix.u.addr4.addr);
-              revalidate_prefix(bgp, AFI_IP, &prefix);
-              break;
-            case LRTR_IPV6:
-              prefix.family = AFI_IP6;
-              ipv6_addr_to_network_byte_order(rec.prefix.u.addr6.addr,
-                  prefix.u.prefix6.s6_addr32);
-              revalidate_prefix(bgp, AFI_IP6, &prefix);
-              break;
-            default:
-              break;
-            }
-        }
-    }
-}
-
-static void
-revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix)
-{
-  struct bgp_node *bgp_node;
-  struct bgp_info* bgp_info;
-  safi_t safi;
-
-  for (safi = SAFI_UNICAST; safi < SAFI_MAX; safi++)
-    {
-      bgp_node = bgp_node_lookup(bgp->rib[afi][safi], prefix);
-      if (bgp_node != NULL && bgp_node->info != NULL )
-        {
-          bool status_changed = false;
-          for (bgp_info = bgp_node->info; bgp_info; bgp_info = bgp_info->next)
-            {
-              u_char old_status = bgp_info->rpki_validation_status;
-              bgp_info->rpki_validation_status = rpki_validate_prefix(
-                  bgp_info->peer, bgp_info->attr, &bgp_node->p);
-              if (old_status != bgp_info->rpki_validation_status)
-                {
-                  status_changed = true;
-                }
-            }
-          if (status_changed)
-            {
-              bgp_process(bgp, bgp_node, afi, safi);
-            }
-        }
-    }
-}
-
-static void
-print_record(struct vty *vty, const struct lpfst_node* node)
-{
-  unsigned int i;
-  char ip[INET6_ADDRSTRLEN];
-  node_data* data = (node_data*) node->data;
-  for (i = 0; i < data->len; ++i)
-    {
-      ip_addr_to_str(&(node->prefix), ip, sizeof(ip));
-      vty_out(vty, "%-40s   %3u - %3u   %10u %s", ip, node->len,
-          data->ary[i].max_len, data->ary[i].asn, VTY_NEWLINE);
-    }
-}
-
-static void
-ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest)
-{
-    int i;
-    for (i = 0; i < 4; i++)
-    dest[i] = htonl(src[i]);
 }
 
 FRR_MODULE_SETUP(
