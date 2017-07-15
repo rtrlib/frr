@@ -84,6 +84,25 @@ static void revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix)
 /*****************************************/
 /** Implementation of public functions  **/
 /*****************************************/
+
+static void
+list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count)
+{
+  *count += 1;
+
+  if (node->lchild != NULL )
+    {
+      list_all_nodes(vty, node->lchild, count);
+    }
+
+  print_record(vty, node);
+
+  if (node->rchild != NULL )
+    {
+      list_all_nodes(vty, node->rchild, count);
+    }
+}
+
 inline void
 rpki_set_route_map_active(int activate)
 {
@@ -432,24 +451,6 @@ update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record 
               break;
             }
         }
-    }
-}
-
-static void
-list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count)
-{
-  *count += 1;
-
-  if (node->lchild != NULL )
-    {
-      list_all_nodes(vty, node->lchild, count);
-    }
-
-  print_record(vty, node);
-
-  if (node->rchild != NULL )
-    {
-      list_all_nodes(vty, node->rchild, count);
     }
 }
 
