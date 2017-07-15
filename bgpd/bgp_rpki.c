@@ -221,7 +221,7 @@ update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record 
     }
 }
 static int
-rpki_init(void)
+bgp_rpki_init(void)
 {
   rpki_debug = 0;
   install_cli_commands();
@@ -233,9 +233,9 @@ rpki_init(void)
 }
 
 static int
-rpki_module_init(void)
+bgp_rpki_module_init(void)
 {
-  hook_register(frr_late_init, rpki_init);
+  hook_register(frr_late_init, bgp_rpki_init);
   return 0;
 }
 
@@ -505,5 +505,5 @@ FRR_MODULE_SETUP(
         .name = "bgpd_rpki",
         .version = "0.3.6",
         .description = "Enable RPKI support for FRR.",
-        .init = rpki_module_init
+        .init = bgp_rpki_module_init
 )
