@@ -42,6 +42,7 @@
 #include "bgpd/bgp_route.h"
 #include "bgpd/bgp_rpki.h"
 #include "bgpd/bgp_rpki_commands.h"
+#include "bgpd/bgp_memory.h"
 
 #define RPKI_OUTPUT_STRING "Control rpki specific settings\n"
 /**************************************/
