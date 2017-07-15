@@ -101,7 +101,7 @@ print_record(struct vty *vty, const struct lpfst_node* node)
   node_data* data = (node_data*) node->data;
   for (i = 0; i < data->len; ++i)
     {
-      ip_addr_to_str(&(node->prefix), ip, sizeof(ip));
+      lrtr_ip_addr_to_str(&(node->prefix), ip, sizeof(ip));
       vty_out(vty, "%-40s   %3u - %3u   %10u %s", ip, node->len,
           data->ary[i].max_len, data->ary[i].asn, VTY_NEWLINE);
     }
