@@ -75,8 +75,8 @@ extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t 
 /*****************************************/
 /** Declaration of private functions    **/
 /*****************************************/
-//static void list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count);
-//static void print_record(struct vty *vty, const struct lpfst_node* node);
+//static void list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* count);
+//static void print_record(struct vty *vty, const struct trie_node* node);
 //static void update_cb(struct pfx_table* p, const struct pfx_record rec, const bool added);
 //static void ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest);
 //static void revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix);
@@ -94,7 +94,7 @@ ipv6_addr_to_network_byte_order(const uint32_t* src, uint32_t* dest)
 }
 
 static void
-print_record(struct vty *vty, const struct lpfst_node* node)
+print_record(struct vty *vty, const struct trie_node* node)
 {
   unsigned int i;
   char ip[INET6_ADDRSTRLEN];
@@ -108,7 +108,7 @@ print_record(struct vty *vty, const struct lpfst_node* node)
 }
 
 static void
-list_all_nodes(struct vty *vty, const struct lpfst_node* node, unsigned int* count)
+list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* count)
 {
   *count += 1;
 
