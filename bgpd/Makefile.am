@@ -114,6 +114,12 @@ bgpd_snmp_la_CFLAGS = $(WERROR) $(SNMP_CFLAGS)
 bgpd_snmp_la_LDFLAGS = -avoid-version -module -shared -export-dynamic
 bgpd_snmp_la_LIBADD = ../lib/libfrrsnmp.la
 
+module_LTLIBRARIES += bgpd_test.la
+
+bgpd_test_la_SOURCES = bgp_rpki.c
+bgpd_test_la_CFLAGS = $(WERROR) $(SNMP_CFLAGS)
+bgpd_test_la_LDFLAGS = -avoid-version -module -shared -export-dynamic
+
 examplesdir = $(exampledir)
 dist_examples_DATA = bgpd.conf.sample bgpd.conf.sample2 \
 	bgpd.conf.vnc.sample
