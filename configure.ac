@@ -1835,20 +1835,14 @@ dnl ------------------------------------
 dnl Enable RPKI and add librtr to libs
 dnl ------------------------------------
 if test "${enable_rpki}" = "yes"; then
-  AC_CHECK_LIB(rtr, rtr_mgr_start,
-    [AC_CHECK_HEADERS(pthread.h,
+  PKG_CHECK_MODULES(RTRLIB,[rtrlib >= 0.3.6],
       [AC_DEFINE(HAVE_RPKI,1,Enable RPKI prefix validation for BGP)
-      RPKI=true
-      LIBS="$LIBS -lrtr"
-      CFLAGS="$CFLAGS -pthread"],
-      [RPKI=false 
+      RPKI=true],
+      [RPKI=false
       AC_MSG_ERROR([libpthread was not found on your system, which is needed by rpki prefix validation.])]
-    )], 
-    [RPKI=false
-    AC_MSG_ERROR([librtr was not found on your system, which is needed by rpki prefix validation.])]
   )
 fi
-AM_CONDITIONAL([HAVE_RPKI], test "x$RPKI" = "xtrue")
+AM_CONDITIONAL([RPKI], test "x$RPKI" = "xtrue")
 
 dnl ---------------------------
 dnl Check htonl works correctly
