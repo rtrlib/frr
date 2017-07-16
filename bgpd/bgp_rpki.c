@@ -512,7 +512,7 @@ update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record 
     }
 }
 static int
-bgp_rpki_init(void)
+bgp_rpki_init(struct thread_master *master)
 {
   rpki_debug = 0;
   rtr_is_running = 0;

@@ -83,8 +83,7 @@ libbgp_a_SOURCES = \
 	bgp_damp.c bgp_table.c bgp_advertise.c bgp_vty.c bgp_mpath.c \
 	bgp_nht.c bgp_updgrp.c bgp_updgrp_packet.c bgp_updgrp_adv.c bgp_bfd.c \
 	bgp_encap_tlv.c $(BGP_VNC_RFAPI_SRC) bgp_attr_evpn.c \
-	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c bgp_label.c bgp_rd.c \
-	bgp_rpki.c
+	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c bgp_label.c bgp_rd.c
 
 noinst_HEADERS = \
 	bgp_memory.h \
