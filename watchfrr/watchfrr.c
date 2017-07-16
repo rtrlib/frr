@@ -666,12 +666,10 @@ static void daemon_send_ready(void)
 {
 	static int sent = 0;
 	if (!sent && gs.numdown == 0) {
-#if defined (HAVE_CUMULUS)
 		FILE *fp;
 
 		fp = fopen(DAEMON_VTY_DIR "/watchfrr.started", "w");
 		fclose(fp);
-#endif
 		zlog_notice
 		    ("Watchfrr: Notifying Systemd we are up and running");
 		systemd_send_started(master, 0);
@@ -1296,7 +1294,7 @@ int main(int argc, char **argv)
 	if (watchfrr_di.daemon_mode) {
 		zlog_set_level(ZLOG_DEST_SYSLOG, MIN(gs.loglevel, LOG_DEBUG));
 		if (daemon (0, 0) < 0) {
-			fprintf(stderr, "Watchquagga daemon failed: %s",
+			fprintf(stderr, "Watchfrr daemon failed: %s",
 					strerror(errno));
 			exit (1);
 		}

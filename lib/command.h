@@ -91,6 +91,7 @@ enum node_type
   TABLE_NODE,                   /* rtm_table selection node. */
   RIP_NODE,                     /* RIP protocol mode node. */
   RIPNG_NODE,                   /* RIPng protocol mode node. */
+  BABEL_NODE,                   /* BABEL protocol mode node. */
   EIGRP_NODE,                   /* EIGRP protocol mode node. */
   BGP_NODE,                     /* BGP protocol mode which includes BGP4+ */
   BGP_VPNV4_NODE,               /* BGP MPLS-VPN PE exchange. */
@@ -135,6 +136,7 @@ enum node_type
   MPLS_NODE,                    /* MPLS config node */
   VTY_NODE,                     /* Vty node. */
   LINK_PARAMS_NODE,             /* Link-parameters node */
+  BGP_EVPN_VNI_NODE,            /* BGP EVPN VNI */
   RPKI_NODE,                    /* RPKI node for configuration of RPKI cache server connections.*/
 };
 
@@ -178,6 +180,7 @@ struct cmd_node
 #define CMD_SUCCESS_DAEMON      10
 #define CMD_ERR_NO_FILE         11
 #define CMD_SUSPEND             12
+#define CMD_WARNING_CONFIG_FAILED 13
 
 /* Argc max counts. */
 #define CMD_ARGC_MAX   25
@@ -206,6 +209,10 @@ struct cmd_node
      struct vty *vty __attribute__ ((unused)), \
      int argc __attribute__ ((unused)), \
      struct cmd_token *argv[] __attribute__ ((unused)) )
+
+#define DEFPY(funcname, cmdname, cmdstr, helpstr) \
+  DEFUN_CMD_ELEMENT(funcname, cmdname, cmdstr, helpstr, 0, 0) \
+  funcdecl_##funcname
 
 #define DEFUN(funcname, cmdname, cmdstr, helpstr) \
   DEFUN_CMD_FUNC_DECL(funcname) \
@@ -274,6 +281,9 @@ struct cmd_node
 #define ALIAS_SH_DEPRECATED(daemon, funcname, cmdname, cmdstr, helpstr) \
   DEFUN_CMD_ELEMENT(funcname, cmdname, cmdstr, helpstr, CMD_ATTR_DEPRECATED, daemon)
 
+#else /* VTYSH_EXTRACT_PL */
+#define DEFPY(funcname, cmdname, cmdstr, helpstr) \
+  DEFUN(funcname, cmdname, cmdstr, helpstr)
 #endif /* VTYSH_EXTRACT_PL */
 
 /* Some macroes */
@@ -286,6 +296,7 @@ struct cmd_node
  */
 #define CMD_CREATE_STR(s)  CMD_CREATE_STR_HELPER(s)
 #define CMD_CREATE_STR_HELPER(s) #s
+#define CMD_RANGE_STR(a,s) "(" CMD_CREATE_STR(a) "-" CMD_CREATE_STR(s) ")"
 
 /* Common descriptions. */
 #define SHOW_STR "Show running system information\n"
@@ -397,5 +408,6 @@ struct cmd_variable_handler {
 
 extern void cmd_variable_complete (struct cmd_token *token, const char *arg, vector comps);
 extern void cmd_variable_handler_register (const struct cmd_variable_handler *cvh);
+extern char *cmd_variable_comp2str (vector comps, unsigned short cols);
 
 #endif /* _ZEBRA_COMMAND_H */

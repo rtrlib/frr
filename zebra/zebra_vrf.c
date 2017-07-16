@@ -37,6 +37,7 @@
 #include "zebra/zebra_static.h"
 #include "zebra/interface.h"
 #include "zebra/zebra_mpls.h"
+#include "zebra/zebra_vxlan.h"
 
 extern struct zebra_t zebrad;
 
@@ -244,6 +245,9 @@ zebra_vrf_delete (struct vrf *vrf)
 		rib_close_table (zvrf->other_table[afi][table_id]);
 	}
 
+      /* Cleanup Vxlan table and update kernel */
+      zebra_vxlan_close_tables (zvrf);
+
       zebra_mpls_close_tables (zvrf);
 
       for (ALL_LIST_ELEMENTS_RO (vrf->iflist, node, ifp))
@@ -334,10 +338,10 @@ zebra_vrf_table_with_table_id (afi_t afi, safi_t safi,
 static void
 zebra_rtable_node_cleanup (struct route_table *table, struct route_node *node)
 {
-  struct rib *rib, *next;
+  struct route_entry *re, *next;
 
-  RNODE_FOREACH_RIB_SAFE (node, rib, next)
-    rib_unlink (node, rib);
+  RNODE_FOREACH_RE_SAFE (node, re, next)
+    rib_unlink (node, re);
 
   if (node->info)
     XFREE (MTYPE_RIB_DEST, node->info);
@@ -421,6 +425,7 @@ zebra_vrf_alloc (void)
       zvrf->import_check_table[afi] = table;
     }
 
+  zebra_vxlan_init_tables (zvrf);
   zebra_mpls_init_tables (zvrf);
 
   return zvrf;
@@ -524,8 +529,8 @@ vrf_config_write (struct vty *vty)
       zvrf = vrf->info;
       if (! zvrf || strcmp (zvrf_name (zvrf), VRF_DEFAULT_NAME))
         {
-          vty_out (vty, "vrf %s%s", zvrf_name (zvrf), VTY_NEWLINE);
-          vty_out (vty, "!%s", VTY_NEWLINE);
+          vty_out (vty, "vrf %s\n", zvrf_name(zvrf));
+          vty_out (vty, "!\n");
         }
     }
   return 0;

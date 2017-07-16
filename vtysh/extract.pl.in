@@ -85,7 +85,7 @@ foreach (@ARGV) {
             $protocol = "VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_PIMD|VTYSH_EIGRPD";
         }
         elsif ($file =~ /lib\/vrf\.c$/) {
-            $protocol = "VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_EIGRPD";
+            $protocol = "VTYSH_RIPD|VTYSH_RIPNGD|VTYSH_OSPFD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_EIGRPD|VTYSH_BABELD";
         }
         elsif ($file =~ /lib\/filter\.c$/) {
             $protocol = "VTYSH_ALL";
@@ -98,9 +98,9 @@ foreach (@ARGV) {
         }
         elsif ($file =~ /lib\/plist\.c$/) {
             if ($defun_array[1] =~ m/ipv6/) {
-                $protocol = "VTYSH_RIPNGD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA";
+                $protocol = "VTYSH_RIPNGD|VTYSH_OSPF6D|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_BABELD";
             } else {
-                $protocol = "VTYSH_RIPD|VTYSH_OSPFD|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_PIMD|VTYSH_EIGRPD";
+                $protocol = "VTYSH_RIPD|VTYSH_OSPFD|VTYSH_BGPD|VTYSH_ZEBRA|VTYSH_PIMD|VTYSH_EIGRPD|VTYSH_BABELD";
             }
         }
         elsif ($file =~ /lib\/distribute\.c$/) {
@@ -198,7 +198,7 @@ foreach (keys %odefun) {
 }
 
 # Output DEFSH
-foreach (keys %live) {
+foreach (sort keys %live) {
     my ($proto);
     my ($key);
     $key = $live{$_};
@@ -213,7 +213,7 @@ vtysh_init_cmd ()
 {
 EOF
 
-foreach (keys %odefun) {
+foreach (sort keys %odefun) {
     my ($node, $str) = (split (/,/));
     $cmd = $ocmd{$_};
     $cmd =~ s/_cmd/_cmd_vtysh/;

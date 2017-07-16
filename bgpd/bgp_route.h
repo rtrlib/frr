@@ -54,10 +54,10 @@ enum bgp_show_type
 
 
 #define BGP_SHOW_SCODE_HEADER "Status codes: s suppressed, d damped, "\
-                              "h history, * valid, > best, = multipath,%s"\
-                "              i internal, r RIB-failure, S Stale, R Removed%s"
-#define BGP_SHOW_OCODE_HEADER "Origin codes: i - IGP, e - EGP, ? - incomplete%s%s"
-#define BGP_SHOW_HEADER "   Network          Next Hop            Metric LocPrf Weight Path%s"
+                              "h history, * valid, > best, = multipath,\n"\
+                "              i internal, r RIB-failure, S Stale, R Removed\n"
+#define BGP_SHOW_OCODE_HEADER "Origin codes: i - IGP, e - EGP, ? - incomplete\n\n"
+#define BGP_SHOW_HEADER "   Network          Next Hop            Metric LocPrf Weight Path\n"
 
 /* Ancillary information to struct bgp_info, 
  * used for uncommonly used data (aggregation, MPLS, etc.)
@@ -75,7 +75,7 @@ struct bgp_info_extra
   u_int32_t igpmetric;
 
   /* MPLS label.  */
-  u_char tag[3];  
+  mpls_label_t label;
 
 #if ENABLE_BGP_VNC
   union {
@@ -100,6 +100,9 @@ struct bgp_info_extra
 
   } vnc;
 #endif
+
+  /* For imported routes into a VNI (or VRF), this points to the parent. */
+  void *parent;
 };
 
 struct bgp_info
@@ -178,6 +181,13 @@ struct bgp_info
 
 };
 
+/* Structure used in BGP path selection */
+struct bgp_info_pair
+{
+  struct bgp_info *old;
+  struct bgp_info *new;
+};
+
 /* BGP static route configuration. */
 struct bgp_static
 {
@@ -211,7 +221,7 @@ struct bgp_static
   struct prefix_rd     prd;
 
   /* MPLS label.  */
-  u_char tag[3];
+  mpls_label_t label;
 
   /* EVPN */
   struct eth_segment_id *eth_s_id;
@@ -226,8 +236,8 @@ struct bgp_static
 
 #define BGP_ATTR_NEXTHOP_AFI_IP6(attr) \
   (! CHECK_FLAG (attr->flag, ATTR_FLAG_BIT (BGP_ATTR_NEXT_HOP)) && \
-   (attr)->extra && ((attr)->extra->mp_nexthop_len == 16 || \
-    (attr)->extra->mp_nexthop_len == 32))
+    ((attr)->mp_nexthop_len == 16 || \
+    (attr)->mp_nexthop_len == 32))
 #define BGP_INFO_COUNTABLE(BI) \
   (! CHECK_FLAG ((BI)->flags, BGP_INFO_HISTORY) \
    && ! CHECK_FLAG ((BI)->flags, BGP_INFO_REMOVED))
@@ -317,6 +327,7 @@ extern struct bgp_node *bgp_afi_node_get (struct bgp_table *table, afi_t afi,
 extern struct bgp_info *bgp_info_lock (struct bgp_info *);
 extern struct bgp_info *bgp_info_unlock (struct bgp_info *);
 extern void bgp_info_add (struct bgp_node *rn, struct bgp_info *ri);
+extern void bgp_info_reap (struct bgp_node *rn, struct bgp_info *ri);
 extern void bgp_info_delete (struct bgp_node *rn, struct bgp_info *ri);
 extern struct bgp_info_extra *bgp_info_extra_get (struct bgp_info *);
 extern void bgp_info_set_flag (struct bgp_node *, struct bgp_info *, u_int32_t);
@@ -352,9 +363,9 @@ extern int bgp_static_unset_safi (afi_t afi, safi_t safi, struct vty *, const ch
 /* this is primarily for MPLS-VPN */
 extern int bgp_update (struct peer *, struct prefix *, u_int32_t, struct attr *,
 		       afi_t, safi_t, int, int, struct prefix_rd *,
-		       u_char *, int, struct bgp_route_evpn *);
+		       mpls_label_t *, int, struct bgp_route_evpn *);
 extern int bgp_withdraw (struct peer *, struct prefix *, u_int32_t, struct attr *,
-			 afi_t, safi_t, int, int, struct prefix_rd *, u_char *, 
+			 afi_t, safi_t, int, int, struct prefix_rd *, mpls_label_t *,
                          struct bgp_route_evpn *);
 
 /* for bgp_nexthop and bgp_damp */
@@ -380,6 +391,10 @@ extern u_char bgp_distance_apply (struct prefix *, struct bgp_info *, afi_t, saf
 extern afi_t bgp_node_afi (struct vty *);
 extern safi_t bgp_node_safi (struct vty *);
 
+extern struct bgp_info *
+info_make (int type, int sub_type, u_short instance, struct peer *peer,
+           struct attr *attr, struct bgp_node *rn);
+
 extern void route_vty_out (struct vty *, struct prefix *, struct bgp_info *, int, safi_t, json_object *);
 extern void route_vty_out_tag (struct vty *, struct prefix *, struct bgp_info *, int, safi_t, json_object *);
 extern void route_vty_out_tmp (struct vty *, struct prefix *, struct attr *, safi_t, u_char, json_object *);
@@ -404,10 +419,32 @@ extern void bgp_process_queues_drain_immediate (void);
 extern struct bgp_node *
 bgp_afi_node_get (struct bgp_table *, afi_t , safi_t , struct prefix *,
  		  struct prefix_rd *);
+extern struct bgp_node *
+bgp_afi_node_lookup (struct bgp_table *table, afi_t afi, safi_t safi,
+                     struct prefix *p, struct prefix_rd *prd);
 extern struct bgp_info *bgp_info_new (void);
 extern void bgp_info_restore (struct bgp_node *, struct bgp_info *);
 
-extern int bgp_info_cmp_compatible (struct bgp *, struct bgp_info *,
-                                    struct bgp_info *, afi_t, safi_t );
+extern int
+bgp_info_cmp_compatible (struct bgp *, struct bgp_info *, struct bgp_info *,
+                         char *pfx_buf, afi_t afi, safi_t safi);
 
+extern void
+bgp_best_selection (struct bgp *bgp, struct bgp_node *rn,
+		    struct bgp_maxpaths_cfg *mpath_cfg,
+		    struct bgp_info_pair *result,
+                    afi_t afi, safi_t safi);
+extern void bgp_zebra_clear_route_change_flags (struct bgp_node *rn);
+extern int
+bgp_zebra_has_route_changed (struct bgp_node *rn, struct bgp_info *selected);
+
+extern void
+route_vty_out_detail_header (struct vty *vty, struct bgp *bgp,
+			     struct bgp_node *rn,
+                             struct prefix_rd *prd, afi_t afi, safi_t safi,
+                             json_object *json);
+extern void
+route_vty_out_detail (struct vty *vty, struct bgp *bgp, struct prefix *p, 
+		      struct bgp_info *binfo, afi_t afi, safi_t safi,
+                      json_object *json_paths);
 #endif /* _QUAGGA_BGP_ROUTE_H */

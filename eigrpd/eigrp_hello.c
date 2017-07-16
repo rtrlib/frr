@@ -66,10 +66,8 @@ static const struct message eigrp_general_tlv_type_str[] =
   { EIGRP_TLV_PEER_TERMINATION, "PEER_TERMINATION"      },
   { EIGRP_TLV_PEER_MTRLIST,     "PEER_MTRLIST"          },
   { EIGRP_TLV_PEER_TIDLIST,     "PEER_TIDLIST"          },
+  { 0 }
 };
-
-static const size_t eigrp_general_tlv_type_str_max = sizeof(eigrp_general_tlv_type_str) /
-  sizeof(eigrp_general_tlv_type_str[0]);
 
 
 /*
@@ -122,7 +120,7 @@ eigrp_hello_timer (struct thread *thread)
  * Note the addition of K6 for the new extended metrics, and does not apply to
  * older TLV packet formats.
  */
-static void
+static struct eigrp_neighbor *
 eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
                               struct eigrp_tlv_hdr_type *tlv)			      
 {
@@ -172,6 +170,7 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
               zlog_info ("Neighbor %s (%s) is down: Interface PEER-TERMINATION received",
                          inet_ntoa (nbr->src),ifindex2ifname (nbr->ei->ifp->ifindex, VRF_DEFAULT));
               eigrp_nbr_delete (nbr);
+              return NULL;
             }
           else
             {
@@ -181,6 +180,8 @@ eigrp_hello_parameter_decode (struct eigrp_neighbor *nbr,
             }
         }
     }
+
+  return nbr;
 }
 
 static u_char
@@ -343,13 +344,15 @@ eigrp_hello_receive (struct eigrp *eigrp, struct ip *iph, struct eigrp_header *e
     if ((length > 0) && (length <= size))
       {
         if (IS_DEBUG_EIGRP_PACKET(0, RECV))
-          zlog_debug("  General TLV(%s)", LOOKUP(eigrp_general_tlv_type_str, type));
+          zlog_debug("  General TLV(%s)", lookup_msg(eigrp_general_tlv_type_str, type, NULL));
 
         // determine what General TLV is being processed
         switch (type)
           {
           case EIGRP_TLV_PARAMETER:
-            eigrp_hello_parameter_decode(nbr, tlv_header);
+            nbr = eigrp_hello_parameter_decode(nbr, tlv_header);
+            if (!nbr)
+              return;
             break;
           case EIGRP_TLV_AUTH:
             {

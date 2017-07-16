@@ -393,7 +393,6 @@ process_unicast_route (
       if (ret == RMAP_DENYMATCH)
         {
           bgp_attr_flush (&hattr);
-          bgp_attr_extra_free (&hattr);
           vnc_zlog_debug_verbose ("%s: route map \"%s\" says DENY, returning", __func__,
                       rmap->name);
           return -1;
@@ -406,8 +405,8 @@ process_unicast_route (
    */
   rfapiUnicastNexthop2Prefix (afi, &hattr, unicast_nexthop);
 
-  if (hattr.extra && hattr.extra->ecommunity)
-    *ecom = ecommunity_dup (hattr.extra->ecommunity);
+  if (hattr.ecommunity)
+    *ecom = ecommunity_dup (hattr.ecommunity);
   else
     *ecom = ecommunity_new ();
 
@@ -415,7 +414,6 @@ process_unicast_route (
    * Done with hattr, clean up
    */
   bgp_attr_flush (&hattr);
-  bgp_attr_extra_free (&hattr);
 
   /*
    * Add EC that carries original NH of iBGP route (2 bytes = magic
@@ -510,18 +508,18 @@ vnc_import_bgp_add_route_mode_resolve_nve_one_bi (
       plifetime = &lifetime;
     }
 
-  if (bi->attr && bi->attr->extra)
+  if (bi->attr)
     {
-      encaptlvs = bi->attr->extra->vnc_subtlvs;
-      if (bi->attr->extra->encap_tunneltype != BGP_ENCAP_TYPE_RESERVED &&
-          bi->attr->extra->encap_tunneltype != BGP_ENCAP_TYPE_MPLS)
+      encaptlvs = bi->attr->vnc_subtlvs;
+      if (bi->attr->encap_tunneltype != BGP_ENCAP_TYPE_RESERVED &&
+          bi->attr->encap_tunneltype != BGP_ENCAP_TYPE_MPLS)
         {
           if (opt != NULL)
             opt->next = &optary[cur_opt];
           opt = &optary[cur_opt++];
           memset (opt, 0, sizeof (struct rfapi_un_option));
           opt->type = RFAPI_UN_OPTION_TYPE_TUNNELTYPE;
-          opt->v.tunnel.type =  bi->attr->extra->encap_tunneltype;
+          opt->v.tunnel.type =  bi->attr->encap_tunneltype;
           /* TBD parse bi->attr->extra->encap_subtlvs */
         }
     }
@@ -532,11 +530,11 @@ vnc_import_bgp_add_route_mode_resolve_nve_one_bi (
 
   struct ecommunity *new_ecom = ecommunity_dup (ecom);
 
-  if (bi->attr && bi->attr->extra && bi->attr->extra->ecommunity)
-    ecommunity_merge (new_ecom, bi->attr->extra->ecommunity);
+  if (bi->attr && bi->attr->ecommunity)
+    ecommunity_merge (new_ecom, bi->attr->ecommunity);
 
   if (bi->extra)
-    label = decode_label (bi->extra->tag);
+    label = decode_label (&bi->extra->label);
 
   add_vnc_route (
     &vncHDResolveNve,
@@ -891,7 +889,6 @@ vnc_import_bgp_add_route_mode_plain (struct bgp *bgp,
       if (ret == RMAP_DENYMATCH)
         {
           bgp_attr_flush (&hattr);
-          bgp_attr_extra_free (&hattr);
           vnc_zlog_debug_verbose ("%s: route map \"%s\" says DENY, returning", __func__,
                       rmap->name);
           return;
@@ -900,7 +897,6 @@ vnc_import_bgp_add_route_mode_plain (struct bgp *bgp,
 
   iattr = bgp_attr_intern (&hattr);
   bgp_attr_flush (&hattr);
-  bgp_attr_extra_free (&hattr);
 
   /* Now iattr is an allocated interned attr */
 
@@ -925,8 +921,8 @@ vnc_import_bgp_add_route_mode_plain (struct bgp *bgp,
     memset (&prd, 0, sizeof (prd));
     rfapi_set_autord_from_vn (&prd, &vnaddr);
 
-    if (iattr && iattr->extra && iattr->extra->ecommunity)
-      ecom = ecommunity_dup (iattr->extra->ecommunity);
+    if (iattr && iattr->ecommunity)
+      ecom = ecommunity_dup (iattr->ecommunity);
 
   }
 
@@ -1103,7 +1099,6 @@ vnc_import_bgp_add_route_mode_nvegroup (struct bgp *bgp,
       if (ret == RMAP_DENYMATCH)
         {
           bgp_attr_flush (&hattr);
-          bgp_attr_extra_free (&hattr);
           vnc_zlog_debug_verbose ("%s: route map \"%s\" says DENY, returning", __func__,
                       rmap->name);
           return;
@@ -1112,7 +1107,6 @@ vnc_import_bgp_add_route_mode_nvegroup (struct bgp *bgp,
 
   iattr = bgp_attr_intern (&hattr);
   bgp_attr_flush (&hattr);
-  bgp_attr_extra_free (&hattr);
 
   /* Now iattr is an allocated interned attr */
 
@@ -1139,8 +1133,8 @@ vnc_import_bgp_add_route_mode_nvegroup (struct bgp *bgp,
     else
       ecom = ecommunity_new ();
 
-    if (iattr && iattr->extra && iattr->extra->ecommunity)
-      ecom = ecommunity_merge (ecom, iattr->extra->ecommunity);
+    if (iattr && iattr->ecommunity)
+      ecom = ecommunity_merge (ecom, iattr->ecommunity);
   }
 
   local_pref = calc_local_pref (iattr, peer);
@@ -1919,7 +1913,7 @@ vnc_import_bgp_exterior_add_route_it (
               if (bi_interior->extra)
                 {
                   prd = &bi_interior->extra->vnc.import.rd;
-                  label = decode_label (bi_interior->extra->tag);
+                  label = decode_label (&bi_interior->extra->label);
                 }
               else
                 prd = NULL;
@@ -1942,7 +1936,6 @@ vnc_import_bgp_exterior_add_route_it (
                                              ZEBRA_ROUTE_BGP_DIRECT_EXT,
                                              BGP_ROUTE_REDISTRIBUTE, &label);
 
-              bgp_attr_extra_free (&new_attr);
             }
 
           if (have_usable_route)
@@ -2101,7 +2094,7 @@ vnc_import_bgp_exterior_del_route (
               if (bi_interior->extra)
                 {
                   prd = &bi_interior->extra->vnc.import.rd;
-                  label = decode_label (bi_interior->extra->tag);
+                  label = decode_label (&bi_interior->extra->label);
                 }
               else
                 prd = NULL;
@@ -2249,7 +2242,7 @@ vnc_import_bgp_exterior_add_route_interior (
           if (bi_interior->extra)
             {
               prd = &bi_interior->extra->vnc.import.rd;
-              label = decode_label (bi_interior->extra->tag);
+              label = decode_label (&bi_interior->extra->label);
             }
           else
             prd = NULL;
@@ -2273,7 +2266,6 @@ vnc_import_bgp_exterior_add_route_interior (
                                          ZEBRA_ROUTE_BGP_DIRECT_EXT,
                                          BGP_ROUTE_REDISTRIBUTE, &label);
 
-          bgp_attr_extra_free (&new_attr);
         }
       vnc_zlog_debug_verbose
         ("%s: finished constructing exteriors based on existing monitors",
@@ -2364,7 +2356,7 @@ vnc_import_bgp_exterior_add_route_interior (
                   if (bi->extra)
                     {
                       prd = &bi->extra->vnc.import.rd;
-                      label = decode_label (bi->extra->tag);
+                      label = decode_label (&bi->extra->label);
                     }
                   else
                     prd = NULL;
@@ -2388,7 +2380,7 @@ vnc_import_bgp_exterior_add_route_interior (
               if (bi_interior->extra)
                 {
                   prd = &bi_interior->extra->vnc.import.rd;
-                  label = decode_label (bi_interior->extra->tag);
+                  label = decode_label (&bi_interior->extra->label);
                 }
               else
                 prd = NULL;
@@ -2412,7 +2404,6 @@ vnc_import_bgp_exterior_add_route_interior (
                                              ZEBRA_ROUTE_BGP_DIRECT_EXT,
                                              BGP_ROUTE_REDISTRIBUTE, &label);
 
-              bgp_attr_extra_free (&new_attr);
             }
         }
 
@@ -2512,7 +2503,7 @@ vnc_import_bgp_exterior_add_route_interior (
           if (bi_interior->extra)
             {
               prd = &bi_interior->extra->vnc.import.rd;
-              label = decode_label (bi_interior->extra->tag);
+              label = decode_label (&bi_interior->extra->label);
             }
           else
             prd = NULL;
@@ -2536,7 +2527,6 @@ vnc_import_bgp_exterior_add_route_interior (
                                          ZEBRA_ROUTE_BGP_DIRECT_EXT,
                                          BGP_ROUTE_REDISTRIBUTE, &label);
 
-          bgp_attr_extra_free (&new_attr);
         }
     }
   if (list_adopted)
@@ -2633,7 +2623,7 @@ vnc_import_bgp_exterior_del_route_interior (
       if (bi_interior->extra)
         {
           prd = &bi_interior->extra->vnc.import.rd;
-          label = decode_label (bi_interior->extra->tag);
+          label = decode_label (&bi_interior->extra->label);
         }
       else
         prd = NULL;
@@ -2716,7 +2706,7 @@ vnc_import_bgp_exterior_del_route_interior (
               if (bi->extra)
                 {
                   prd = &bi->extra->vnc.import.rd;
-                  label = decode_label (bi->extra->tag);
+                  label = decode_label (&bi->extra->label);
                 }
               else
                 prd = NULL;
@@ -2740,7 +2730,6 @@ vnc_import_bgp_exterior_del_route_interior (
                                              ZEBRA_ROUTE_BGP_DIRECT_EXT,
                                              BGP_ROUTE_REDISTRIBUTE, &label);
 
-              bgp_attr_extra_free (&new_attr);
             }
 
         }

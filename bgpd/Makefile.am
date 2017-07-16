@@ -1,6 +1,8 @@
 ## Process this file with automake to produce Makefile.in.
 AUTOMAKE_OPTIONS = subdir-objects
 
+include ../common.am
+
 if ENABLE_BGP_VNC
 #o file to keep linker happy
 BGP_VNC_RFP_LIB=rfapi/rfapi_descriptor_rfp_utils.o @top_builddir@/$(LIBRFP)/librfp.a 
@@ -81,7 +83,7 @@ libbgp_a_SOURCES = \
 	bgp_damp.c bgp_table.c bgp_advertise.c bgp_vty.c bgp_mpath.c \
 	bgp_nht.c bgp_updgrp.c bgp_updgrp_packet.c bgp_updgrp_adv.c bgp_bfd.c \
 	bgp_encap_tlv.c $(BGP_VNC_RFAPI_SRC) bgp_attr_evpn.c \
-	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c bgp_label.c \
+	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c bgp_label.c bgp_rd.c \
 	bgp_rpki.c
 
 noinst_HEADERS = \
@@ -94,8 +96,8 @@ noinst_HEADERS = \
 	bgp_advertise.h bgp_vty.h bgp_mpath.h bgp_nht.h \
 	bgp_updgrp.h bgp_bfd.h bgp_encap_tlv.h bgp_encap_types.h \
 	$(BGP_VNC_RFAPI_HD) bgp_attr_evpn.h bgp_evpn.h bgp_evpn_vty.h \
-        bgp_vpn.h bgp_label.h \
-		bgp_rpki.h
+	bgp_vpn.h bgp_label.h bgp_rd.h bgp_evpn_private.h \
+	bgp_rpki.h
 
 bgpd_SOURCES = bgp_main.c
 bgpd_LDADD = libbgp.a  $(BGP_VNC_RFP_LIB) ../lib/libfrr.la @LIBCAP@ @LIBM@
@@ -126,6 +128,9 @@ bgpd_rpki_la_LIBADD = $(RTRLIB_LIBS)
 examplesdir = $(exampledir)
 dist_examples_DATA = bgpd.conf.sample bgpd.conf.sample2 \
 	bgpd.conf.vnc.sample
+
+bgp_vty.o: bgp_vty_clippy.c
+bgp_debug.o: bgp_debug_clippy.c
 
 EXTRA_DIST = BGP4-MIB.txt
 

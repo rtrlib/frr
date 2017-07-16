@@ -186,7 +186,7 @@ eigrp_new (const char *AS)
   eigrp->topology_table = eigrp_topology_new();
 
   eigrp->neighbor_self = eigrp_nbr_new(NULL);
-  inet_aton("0.0.0.0", &eigrp->neighbor_self->src);
+  eigrp->neighbor_self->src.s_addr = INADDR_ANY;
 
   eigrp->variance = EIGRP_VARIANCE_DEFAULT;
   eigrp->max_paths = EIGRP_MAX_PATHS_DEFAULT;
@@ -267,8 +267,10 @@ eigrp_finish (struct eigrp *eigrp)
       && (listcount(eigrp_om->eigrp) == 0))
     {
       if (zclient)
-        zclient_free (zclient);
-
+	{
+	  zclient_stop (zclient);
+	  zclient_free (zclient);
+	}
       exit(0);
     }
 

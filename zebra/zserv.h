@@ -105,6 +105,10 @@ struct zserv
   u_int32_t vrfdel_cnt;
   u_int32_t if_vrfchg_cnt;
   u_int32_t bfd_client_reg_cnt;
+  u_int32_t vniadd_cnt;
+  u_int32_t vnidel_cnt;
+  u_int32_t macipadd_cnt;
+  u_int32_t macipdel_cnt;
 
   time_t connect_time;
   time_t last_read_time;
@@ -145,6 +149,11 @@ extern void hostinfo_get (void);
 extern void rib_init (void);
 extern void interface_list (struct zebra_ns *);
 extern void route_read (struct zebra_ns *);
+extern void macfdb_read (struct zebra_ns *);
+extern void macfdb_read_for_bridge (struct zebra_ns *, struct interface *,
+                                    struct interface *);
+extern void neigh_read (struct zebra_ns *);
+extern void neigh_read_for_vlan (struct zebra_ns *, struct interface *);
 extern void kernel_init (struct zebra_ns *);
 extern void kernel_terminate (struct zebra_ns *);
 extern void zebra_route_map_init (void);
@@ -162,7 +171,7 @@ extern void nbr_connected_add_ipv6 (struct interface *, struct in6_addr *);
 extern void nbr_connected_delete_ipv6 (struct interface *, struct in6_addr *);
 extern int zsend_interface_update (int, struct zserv *, struct interface *);
 extern int zsend_redistribute_route (int, struct zserv *, struct prefix *,
-                                     struct prefix *, struct rib *);
+                                     struct prefix *, struct route_entry *);
 extern int zsend_router_id_update (struct zserv *, struct prefix *,
                                    vrf_id_t);
 extern int zsend_interface_vrf_update (struct zserv *, struct interface *,

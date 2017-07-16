@@ -94,7 +94,12 @@ lsa_delete (struct thread *t)
 
   oclient = THREAD_ARG (t);
 
-  inet_aton (args[6], &area_id);
+  rc = inet_aton (args[6], &area_id);
+  if (rc <= 0)
+    {
+      printf("Address Specified: %s is invalid\n", args[6]);
+      return rc;
+    }
 
   printf ("Deleting LSA... ");
   rc = ospf_apiclient_lsa_delete (oclient, 
@@ -123,8 +128,19 @@ lsa_inject (struct thread *t)
 
   cl = THREAD_ARG (t);
 
-  inet_aton (args[5], &ifaddr);
-  inet_aton (args[6], &area_id);
+  rc = inet_aton (args[5], &ifaddr);
+  if (rc <= 0)
+    {
+      printf ("Ifaddr specified %s is invalid\n", args[5]);
+      return rc;
+    }
+
+  rc = inet_aton (args[6], &area_id);
+  if (rc <= 0)
+    {
+      printf( "Area ID specified %s is invalid\n", args[6]);
+      return rc;
+    }
   lsa_type = atoi (args[2]);
   opaque_type = atoi (args[3]);
   opaque_id = atoi (args[4]);
@@ -251,7 +267,7 @@ ism_change_callback (struct in_addr ifaddr, struct in_addr area_id,
 {
   printf ("ism_change: ifaddr: %s ", inet_ntoa (ifaddr));
   printf ("area_id: %s\n", inet_ntoa (area_id));
-  printf ("state: %d [%s]\n", state, LOOKUP (ospf_ism_state_msg, state));
+  printf ("state: %d [%s]\n", state, lookup_msg(ospf_ism_state_msg, state, NULL));
 }
 
 static void
@@ -261,7 +277,7 @@ nsm_change_callback (struct in_addr ifaddr, struct in_addr nbraddr,
   printf ("nsm_change: ifaddr: %s ", inet_ntoa (ifaddr));
   printf ("nbraddr: %s\n", inet_ntoa (nbraddr));
   printf ("router_id: %s\n", inet_ntoa (router_id));
-  printf ("state: %d [%s]\n", state, LOOKUP (ospf_nsm_state_msg, state));
+  printf ("state: %d [%s]\n", state, lookup_msg(ospf_nsm_state_msg, state, NULL));
 }
 
 
@@ -310,7 +326,7 @@ main (int argc, char *argv[])
 
   /* Initialization */
   zprivs_init (&ospfd_privs);
-  master = thread_master_create ();
+  master = thread_master_create(NULL);
 
   /* Open connection to OSPF daemon */
   oclient = ospf_apiclient_connect (args[1], ASYNCPORT);

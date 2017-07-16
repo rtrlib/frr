@@ -227,16 +227,15 @@ subgrp_show_adjq_vty (struct update_subgroup *subgrp, struct vty *vty,
 	  if (header1)
 	    {
 	      vty_out (vty,
-		       "BGP table version is %" PRIu64 ", local router ID is %s%s",
-		       table->version, inet_ntoa (bgp->router_id),
-		       VTY_NEWLINE);
-	      vty_out (vty, BGP_SHOW_SCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-	      vty_out (vty, BGP_SHOW_OCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
+		       "BGP table version is %" PRIu64 ", local router ID is %s\n",
+		       table->version,inet_ntoa(bgp->router_id));
+	      vty_out (vty, BGP_SHOW_SCODE_HEADER);
+	      vty_out (vty, BGP_SHOW_OCODE_HEADER);
 	      header1 = 0;
 	    }
 	  if (header2)
 	    {
-	      vty_out (vty, BGP_SHOW_HEADER, VTY_NEWLINE);
+	      vty_out (vty, BGP_SHOW_HEADER);
 	      header2 = 0;
 	    }
 	  if ((flags & UPDWALK_FLAGS_ADVQUEUE) && adj->adv && adj->adv->baa)
@@ -251,8 +250,7 @@ subgrp_show_adjq_vty (struct update_subgroup *subgrp, struct vty *vty,
 	    }
 	}
   if (output_count != 0)
-    vty_out (vty, "%sTotal number of prefixes %ld%s",
-	     VTY_NEWLINE, output_count, VTY_NEWLINE);
+    vty_out (vty, "\nTotal number of prefixes %ld\n", output_count);
 }
 
 static int
@@ -267,8 +265,8 @@ updgrp_show_adj_walkcb (struct update_group *updgrp, void *arg)
   {
     if (ctx->subgrp_id && (ctx->subgrp_id != subgrp->id))
       continue;
-    vty_out (vty, "update group %" PRIu64 ", subgroup %" PRIu64 "%s", updgrp->id,
-	     subgrp->id, VTY_NEWLINE);
+    vty_out (vty, "update group %" PRIu64 ", subgroup %" PRIu64 "\n", updgrp->id,
+	     subgrp->id);
     subgrp_show_adjq_vty (subgrp, vty, ctx->flags);
   }
   return UPDWALK_CONTINUE;
@@ -588,7 +586,6 @@ subgroup_announce_table (struct update_subgroup *subgrp,
   struct bgp_node *rn;
   struct bgp_info *ri;
   struct attr attr;
-  struct attr_extra extra;
   struct peer *peer;
   afi_t afi;
   safi_t safi;
@@ -599,6 +596,9 @@ subgroup_announce_table (struct update_subgroup *subgrp,
   safi = SUBGRP_SAFI (subgrp);
   addpath_capable = bgp_addpath_encode_tx (peer, afi, safi);
 
+  if (safi == SAFI_LABELED_UNICAST)
+    safi = SAFI_UNICAST;
+
   if (!table)
     table = peer->bgp->rib[afi][safi];
 
@@ -607,9 +607,6 @@ subgroup_announce_table (struct update_subgroup *subgrp,
       && safi != SAFI_EVPN
       && CHECK_FLAG (peer->af_flags[afi][safi], PEER_FLAG_DEFAULT_ORIGINATE))
     subgroup_default_originate (subgrp, 0);
-
-  /* It's initialized in bgp_announce_check() */
-  attr.extra = &extra;
 
   for (rn = bgp_table_top (table); rn; rn = bgp_route_next (rn))
     for (ri = rn->info; ri; ri = ri->next)
@@ -714,18 +711,16 @@ subgroup_default_originate (struct update_subgroup *subgrp, int withdraw)
     str2prefix ("0.0.0.0/0", &p);
   else if (afi == AFI_IP6)
     {
-      struct attr_extra *ae = attr.extra;
-
       str2prefix ("::/0", &p);
 
       /* IPv6 global nexthop must be included. */
-      ae->mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
+      attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
 
       /* If the peer is on shared nextwork and we have link-local
          nexthop set it. */
       if (peer->shared_network
 	  && !IN6_IS_ADDR_UNSPECIFIED (&peer->nexthop.v6_local))
-        ae->mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL_AND_LL;
+        attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL_AND_LL;
     }
 
   if (peer->default_rmap[afi][safi].name)
@@ -737,11 +732,9 @@ subgroup_default_originate (struct update_subgroup *subgrp, int withdraw)
 	  for (ri = rn->info; ri; ri = ri->next)
 	    {
 	      struct attr dummy_attr;
-	      struct attr_extra dummy_extra;
 	      struct bgp_info info;
 
 	      /* Provide dummy so the route-map can't modify the attributes */
-	      dummy_attr.extra = &dummy_extra;
 	      bgp_attr_dup (&dummy_attr, ri->attr);
 	      info.peer = ri->peer;
 	      info.attr = &dummy_attr;
@@ -792,7 +785,6 @@ subgroup_default_originate (struct update_subgroup *subgrp, int withdraw)
 	}
     }
 
-  bgp_attr_extra_free (&attr);
   aspath_unintern (&aspath);
 }
 

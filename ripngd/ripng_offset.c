@@ -125,16 +125,16 @@ ripng_offset_list_set (struct vty *vty, const char *alist,
     direct = RIPNG_OFFSET_LIST_OUT;
   else
     {
-      vty_out (vty, "Invalid direction: %s%s", direct_str, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Invalid direction: %s\n", direct_str);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Check metric. */
   metric = atoi (metric_str);
   if (metric < 0 || metric > 16)
     {
-      vty_out (vty, "Invalid metric: %s%s", metric_str, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Invalid metric: %s\n", metric_str);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Get offset-list structure with interface name. */
@@ -164,16 +164,16 @@ ripng_offset_list_unset (struct vty *vty, const char *alist,
     direct = RIPNG_OFFSET_LIST_OUT;
   else
     {
-      vty_out (vty, "Invalid direction: %s%s", direct_str, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Invalid direction: %s\n", direct_str);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Check metric. */
   metric = atoi (metric_str);
   if (metric < 0 || metric > 16)
     {
-      vty_out (vty, "Invalid metric: %s%s", metric_str, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Invalid metric: %s\n", metric_str);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Get offset-list structure with interface name. */
@@ -196,8 +196,8 @@ ripng_offset_list_unset (struct vty *vty, const char *alist,
     }
   else
     {
-      vty_out (vty, "Can't find offset-list%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find offset-list\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   return CMD_SUCCESS;
 }
@@ -405,28 +405,26 @@ config_write_ripng_offset_list (struct vty *vty)
       if (! offset->ifname)
 	{
 	  if (offset->direct[RIPNG_OFFSET_LIST_IN].alist_name)
-	    vty_out (vty, " offset-list %s in %d%s",
+	    vty_out (vty, " offset-list %s in %d\n",
 		     offset->direct[RIPNG_OFFSET_LIST_IN].alist_name,
-		     offset->direct[RIPNG_OFFSET_LIST_IN].metric,
-		     VTY_NEWLINE);
+		     offset->direct[RIPNG_OFFSET_LIST_IN].metric);
 	  if (offset->direct[RIPNG_OFFSET_LIST_OUT].alist_name)
-	    vty_out (vty, " offset-list %s out %d%s",
+	    vty_out (vty, " offset-list %s out %d\n",
 		     offset->direct[RIPNG_OFFSET_LIST_OUT].alist_name,
-		     offset->direct[RIPNG_OFFSET_LIST_OUT].metric,
-		     VTY_NEWLINE);
+		     offset->direct[RIPNG_OFFSET_LIST_OUT].metric);
 	}
       else
 	{
 	  if (offset->direct[RIPNG_OFFSET_LIST_IN].alist_name)
-	    vty_out (vty, " offset-list %s in %d %s%s",
+	    vty_out (vty, " offset-list %s in %d %s\n",
 		     offset->direct[RIPNG_OFFSET_LIST_IN].alist_name,
 		     offset->direct[RIPNG_OFFSET_LIST_IN].metric,
-		     offset->ifname, VTY_NEWLINE);
+		     offset->ifname);
 	  if (offset->direct[RIPNG_OFFSET_LIST_OUT].alist_name)
-	    vty_out (vty, " offset-list %s out %d %s%s",
+	    vty_out (vty, " offset-list %s out %d %s\n",
 		     offset->direct[RIPNG_OFFSET_LIST_OUT].alist_name,
 		     offset->direct[RIPNG_OFFSET_LIST_OUT].metric,
-		     offset->ifname, VTY_NEWLINE);
+		     offset->ifname);
 	}
     }
 

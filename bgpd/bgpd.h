@@ -33,6 +33,7 @@
 #include "linklist.h"
 #include "defaults.h"
 #include "bgp_memory.h"
+#include "bitfield.h"
 
 #define BGP_MAX_HOSTNAME 64	/* Linux max, is larger than most other sys */
 
@@ -368,6 +369,20 @@ struct bgp
   struct rfapi_cfg *rfapi_cfg;
   struct rfapi *rfapi;
 #endif
+
+  /* EVPN related information */
+
+  /* EVI hash table */
+  struct hash *vnihash;
+
+  /* EVPN enable - advertise local VNIs and their MACs etc. */
+  int advertise_all_vni;
+
+  /* Hash table of Import RTs to EVIs */
+  struct hash *import_rt_hash;
+
+  /* Id space for automatic RD derivation for an EVI */
+  bitfield_t rd_idspace;
 
   QOBJ_FIELDS
 };
@@ -993,7 +1008,6 @@ struct bgp_nlri
 #define BGP_NOTIFY_FSM_ERR                       5
 #define BGP_NOTIFY_CEASE                         6
 #define BGP_NOTIFY_CAPABILITY_ERR                7
-#define BGP_NOTIFY_MAX	                         8
 
 #define BGP_NOTIFY_SUBCODE_UNSPECIFIC            0
 
@@ -1001,7 +1015,6 @@ struct bgp_nlri
 #define BGP_NOTIFY_HEADER_NOT_SYNC               1
 #define BGP_NOTIFY_HEADER_BAD_MESLEN             2
 #define BGP_NOTIFY_HEADER_BAD_MESTYPE            3
-#define BGP_NOTIFY_HEADER_MAX                    4
 
 /* BGP_NOTIFY_OPEN_ERR sub codes.  */
 #define BGP_NOTIFY_OPEN_MALFORMED_ATTR           0
@@ -1012,7 +1025,6 @@ struct bgp_nlri
 #define BGP_NOTIFY_OPEN_AUTH_FAILURE             5
 #define BGP_NOTIFY_OPEN_UNACEP_HOLDTIME          6
 #define BGP_NOTIFY_OPEN_UNSUP_CAPBL              7
-#define BGP_NOTIFY_OPEN_MAX                      8
 
 /* BGP_NOTIFY_UPDATE_ERR sub codes.  */
 #define BGP_NOTIFY_UPDATE_MAL_ATTR               1
@@ -1026,7 +1038,6 @@ struct bgp_nlri
 #define BGP_NOTIFY_UPDATE_OPT_ATTR_ERR           9
 #define BGP_NOTIFY_UPDATE_INVAL_NETWORK         10
 #define BGP_NOTIFY_UPDATE_MAL_AS_PATH           11
-#define BGP_NOTIFY_UPDATE_MAX                   12
 
 /* BGP_NOTIFY_CEASE sub codes (RFC 4486).  */
 #define BGP_NOTIFY_CEASE_MAX_PREFIX              1
@@ -1037,13 +1048,11 @@ struct bgp_nlri
 #define BGP_NOTIFY_CEASE_CONFIG_CHANGE           6
 #define BGP_NOTIFY_CEASE_COLLISION_RESOLUTION    7
 #define BGP_NOTIFY_CEASE_OUT_OF_RESOURCE         8
-#define BGP_NOTIFY_CEASE_MAX                     9
 
 /* BGP_NOTIFY_CAPABILITY_ERR sub codes (draft-ietf-idr-dynamic-cap-02). */
 #define BGP_NOTIFY_CAPABILITY_INVALID_ACTION     1
 #define BGP_NOTIFY_CAPABILITY_INVALID_LENGTH     2
 #define BGP_NOTIFY_CAPABILITY_MALFORMED_CODE     3
-#define BGP_NOTIFY_CAPABILITY_MAX                4
 
 /* BGP finite state machine status.  */
 #define Idle                                     1
@@ -1159,6 +1168,7 @@ enum bgp_clear_type
 #define BGP_ERR_INVALID_FOR_DYNAMIC_PEER        -32
 #define BGP_ERR_MAX                             -33
 #define BGP_ERR_INVALID_FOR_DIRECT_PEER         -34
+#define BGP_ERR_PEER_SAFI_CONFLICT              -35
 
 /*
  * Enumeration of different policy kinds a peer can be configured with.
@@ -1469,7 +1479,8 @@ peer_afi_active_nego (const struct peer *peer, afi_t afi)
       || peer->afc_nego[afi][SAFI_MULTICAST]
       || peer->afc_nego[afi][SAFI_LABELED_UNICAST]
       || peer->afc_nego[afi][SAFI_MPLS_VPN]
-      || peer->afc_nego[afi][SAFI_ENCAP])
+      || peer->afc_nego[afi][SAFI_ENCAP]
+      || peer->afc_nego[afi][SAFI_EVPN])
     return 1;
   return 0;
 }
@@ -1489,7 +1500,8 @@ peer_group_af_configured (struct peer_group *group)
       || peer->afc[AFI_IP6][SAFI_MULTICAST]
       || peer->afc[AFI_IP6][SAFI_LABELED_UNICAST]
       || peer->afc[AFI_IP6][SAFI_MPLS_VPN]
-      || peer->afc[AFI_IP6][SAFI_ENCAP])
+      || peer->afc[AFI_IP6][SAFI_ENCAP]
+      || peer->afc[AFI_IP6][SAFI_EVPN])
     return 1;
   return 0;
 }

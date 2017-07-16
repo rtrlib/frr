@@ -40,15 +40,15 @@ isis_circuit_lookup (struct vty *vty)
 
   if (!ifp)
     {
-      vty_out (vty, "Invalid interface %s", VTY_NEWLINE);
+      vty_out (vty, "Invalid interface \n");
       return NULL;
     }
 
   circuit = circuit_scan_by_ifp (ifp);
   if (!circuit)
     {
-      vty_out (vty, "ISIS is not enabled on circuit %s%s",
-               ifp->name, VTY_NEWLINE);
+      vty_out (vty, "ISIS is not enabled on circuit %s\n",
+               ifp->name);
       return NULL;
     }
 
@@ -77,8 +77,8 @@ DEFUN (ip_router_isis,
     {
       if (strcmp (circuit->area->area_tag, area_tag))
         {
-          vty_out (vty, "ISIS circuit is already defined on %s%s",
-                   circuit->area->area_tag, VTY_NEWLINE);
+          vty_out (vty, "ISIS circuit is already defined on %s\n",
+                   circuit->area->area_tag);
           return CMD_ERR_NOTHING_TODO;
         }
     }
@@ -92,8 +92,8 @@ DEFUN (ip_router_isis,
 
     if (circuit->state != C_STATE_CONF && circuit->state != C_STATE_UP)
       {
-        vty_out(vty, "Couldn't bring up interface, please check log.%s", VTY_NEWLINE);
-        return CMD_WARNING;
+        vty_out (vty, "Couldn't bring up interface, please check log.\n");
+        return CMD_WARNING_CONFIG_FAILED;
       }
   }
 
@@ -139,16 +139,16 @@ DEFUN (no_ip_router_isis,
   area = isis_area_lookup (area_tag);
   if (!area)
     {
-      vty_out (vty, "Can't find ISIS instance %s%s",
-               argv[idx_afi]->arg, VTY_NEWLINE);
+      vty_out (vty, "Can't find ISIS instance %s\n",
+               argv[idx_afi]->arg);
       return CMD_ERR_NO_MATCH;
     }
 
   circuit = circuit_lookup_by_ifp (ifp, area->circuit_list);
   if (!circuit)
     {
-      vty_out (vty, "ISIS is not enabled on circuit %s%s",
-               ifp->name, VTY_NEWLINE);
+      vty_out (vty, "ISIS is not enabled on circuit %s\n",
+               ifp->name);
       return CMD_ERR_NO_MATCH;
     }
 
@@ -189,8 +189,7 @@ DEFUN (no_isis_passive,
 
   if (if_is_loopback (circuit->interface))
     {
-      vty_out (vty, "Can't set no passive for loopback interface%s",
-               VTY_NEWLINE);
+      vty_out (vty,"Can't set no passive for loopback interface\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -216,7 +215,7 @@ DEFUN (isis_circuit_type,
   is_type = string2circuit_t (argv[idx_level]->arg);
   if (!is_type)
     {
-      vty_out (vty, "Unknown circuit-type %s", VTY_NEWLINE);
+      vty_out (vty, "Unknown circuit-type \n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -224,8 +223,8 @@ DEFUN (isis_circuit_type,
       circuit->area->is_type != IS_LEVEL_1_AND_2 &&
       circuit->area->is_type != is_type)
     {
-      vty_out (vty, "Invalid circuit level for area %s.%s",
-               circuit->area->area_tag, VTY_NEWLINE);
+      vty_out (vty, "Invalid circuit level for area %s.\n",
+               circuit->area->area_tag);
       return CMD_ERR_AMBIGUOUS;
     }
   isis_circuit_is_type_set (circuit, is_type);
@@ -273,9 +272,8 @@ DEFUN (isis_network,
 
   if (isis_circuit_circ_type_set(circuit, CIRCUIT_T_P2P))
     {
-      vty_out (vty, "isis network point-to-point "
-               "is valid only on broadcast interfaces%s",
-               VTY_NEWLINE);
+      vty_out (vty,
+                 "isis network point-to-point is valid only on broadcast interfaces\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -296,9 +294,8 @@ DEFUN (no_isis_network,
 
   if (isis_circuit_circ_type_set(circuit, CIRCUIT_T_BROADCAST))
     {
-      vty_out (vty, "isis network point-to-point "
-               "is valid only on broadcast interfaces%s",
-               VTY_NEWLINE);
+      vty_out (vty,
+                 "isis network point-to-point is valid only on broadcast interfaces\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -327,7 +324,7 @@ DEFUN (isis_passwd,
     rv = isis_circuit_passwd_cleartext_set(circuit, argv[idx_word]->arg);
   if (rv)
     {
-      vty_out (vty, "Too long circuit password (>254)%s", VTY_NEWLINE);
+      vty_out (vty, "Too long circuit password (>254)\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -370,8 +367,8 @@ DEFUN (isis_priority,
   prio = atoi (argv[idx_number]->arg);
   if (prio < MIN_PRIORITY || prio > MAX_PRIORITY)
     {
-      vty_out (vty, "Invalid priority %d - should be <0-127>%s",
-               prio, VTY_NEWLINE);
+      vty_out (vty, "Invalid priority %d - should be <0-127>\n",
+               prio);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -417,8 +414,8 @@ DEFUN (isis_priority_l1,
   prio = atoi (argv[idx_number]->arg);
   if (prio < MIN_PRIORITY || prio > MAX_PRIORITY)
     {
-      vty_out (vty, "Invalid priority %d - should be <0-127>%s",
-               prio, VTY_NEWLINE);
+      vty_out (vty, "Invalid priority %d - should be <0-127>\n",
+               prio);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -463,8 +460,8 @@ DEFUN (isis_priority_l2,
   prio = atoi (argv[idx_number]->arg);
   if (prio < MIN_PRIORITY || prio > MAX_PRIORITY)
     {
-      vty_out (vty, "Invalid priority %d - should be <0-127>%s",
-               prio, VTY_NEWLINE);
+      vty_out (vty, "Invalid priority %d - should be <0-127>\n",
+               prio);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -513,8 +510,8 @@ DEFUN (isis_metric,
       met > MAX_NARROW_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-63> "
-               "when narrow metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when narrow metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -523,8 +520,8 @@ DEFUN (isis_metric,
       met > MAX_WIDE_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-16777215> "
-               "when wide metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when wide metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -573,8 +570,8 @@ DEFUN (isis_metric_l1,
       met > MAX_NARROW_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-63> "
-               "when narrow metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when narrow metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -583,8 +580,8 @@ DEFUN (isis_metric_l1,
       met > MAX_WIDE_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-16777215> "
-               "when wide metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when wide metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -632,8 +629,8 @@ DEFUN (isis_metric_l2,
       met > MAX_NARROW_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-63> "
-               "when narrow metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when narrow metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -642,8 +639,8 @@ DEFUN (isis_metric_l2,
       met > MAX_WIDE_LINK_METRIC)
     {
       vty_out (vty, "Invalid metric %d - should be <0-16777215> "
-               "when wide metric type enabled%s",
-               met, VTY_NEWLINE);
+               "when wide metric type enabled\n",
+               met);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -676,7 +673,6 @@ DEFUN (isis_hello_interval,
        "isis hello-interval (1-600)",
        "IS-IS commands\n"
        "Set Hello interval\n"
-       "Hello interval value\n"
        "Holdtime 1 seconds, interval depends on multiplier\n")
 {
   int idx_number = 2;
@@ -688,8 +684,8 @@ DEFUN (isis_hello_interval,
   interval = atoi (argv[idx_number]->arg);
   if (interval < MIN_HELLO_INTERVAL || interval > MAX_HELLO_INTERVAL)
     {
-      vty_out (vty, "Invalid hello-interval %d - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-interval %d - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -724,7 +720,6 @@ DEFUN (isis_hello_interval_l1,
        "isis hello-interval (1-600) level-1",
        "IS-IS commands\n"
        "Set Hello interval\n"
-       "Hello interval value\n"
        "Holdtime 1 second, interval depends on multiplier\n"
        "Specify hello-interval for level-1 IIHs\n")
 {
@@ -737,8 +732,8 @@ DEFUN (isis_hello_interval_l1,
   interval = atoi (argv[idx_number]->arg);
   if (interval < MIN_HELLO_INTERVAL || interval > MAX_HELLO_INTERVAL)
     {
-      vty_out (vty, "Invalid hello-interval %ld - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-interval %ld - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -772,7 +767,6 @@ DEFUN (isis_hello_interval_l2,
        "isis hello-interval (1-600) level-2",
        "IS-IS commands\n"
        "Set Hello interval\n"
-       "Hello interval value\n"
        "Holdtime 1 second, interval depends on multiplier\n"
        "Specify hello-interval for level-2 IIHs\n")
 {
@@ -785,8 +779,8 @@ DEFUN (isis_hello_interval_l2,
   interval = atoi (argv[idx_number]->arg);
   if (interval < MIN_HELLO_INTERVAL || interval > MAX_HELLO_INTERVAL)
     {
-      vty_out (vty, "Invalid hello-interval %ld - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-interval %ld - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -831,8 +825,8 @@ DEFUN (isis_hello_multiplier,
   mult = atoi (argv[idx_number]->arg);
   if (mult < MIN_HELLO_MULTIPLIER || mult > MAX_HELLO_MULTIPLIER)
     {
-      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>%s",
-               mult, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>\n",
+               mult);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -879,8 +873,8 @@ DEFUN (isis_hello_multiplier_l1,
   mult = atoi (argv[idx_number]->arg);
   if (mult < MIN_HELLO_MULTIPLIER || mult > MAX_HELLO_MULTIPLIER)
     {
-      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>%s",
-               mult, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>\n",
+               mult);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -926,8 +920,8 @@ DEFUN (isis_hello_multiplier_l2,
   mult = atoi (argv[idx_number]->arg);
   if (mult < MIN_HELLO_MULTIPLIER || mult > MAX_HELLO_MULTIPLIER)
     {
-      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>%s",
-               mult, VTY_NEWLINE);
+      vty_out (vty, "Invalid hello-multiplier %d - should be <2-100>\n",
+               mult);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -961,8 +955,7 @@ DEFUN (isis_hello_padding,
        "isis hello padding",
        "IS-IS commands\n"
        "Add padding to IS-IS hello packets\n"
-       "Pad hello packets\n"
-       "<cr>\n")
+       "Pad hello packets\n")
 {
   struct isis_circuit *circuit = isis_circuit_lookup (vty);
   if (!circuit)
@@ -979,8 +972,7 @@ DEFUN (no_isis_hello_padding,
        NO_STR
        "IS-IS commands\n"
        "Add padding to IS-IS hello packets\n"
-       "Pad hello packets\n"
-       "<cr>\n")
+       "Pad hello packets\n")
 {
   struct isis_circuit *circuit = isis_circuit_lookup (vty);
   if (!circuit)
@@ -1007,8 +999,8 @@ DEFUN (csnp_interval,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_CSNP_INTERVAL || interval > MAX_CSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1055,8 +1047,8 @@ DEFUN (csnp_interval_l1,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_CSNP_INTERVAL || interval > MAX_CSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1102,8 +1094,8 @@ DEFUN (csnp_interval_l2,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_CSNP_INTERVAL || interval > MAX_CSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid csnp-interval %lu - should be <1-600>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1148,8 +1140,8 @@ DEFUN (psnp_interval,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_PSNP_INTERVAL || interval > MAX_PSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1196,8 +1188,8 @@ DEFUN (psnp_interval_l1,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_PSNP_INTERVAL || interval > MAX_PSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1243,8 +1235,8 @@ DEFUN (psnp_interval_l2,
   interval = atol (argv[idx_number]->arg);
   if (interval < MIN_PSNP_INTERVAL || interval > MAX_PSNP_INTERVAL)
     {
-      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>%s",
-               interval, VTY_NEWLINE);
+      vty_out (vty, "Invalid psnp-interval %lu - should be <1-120>\n",
+               interval);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1287,13 +1279,14 @@ DEFUN (circuit_topology,
 
   if (circuit->area && circuit->area->oldmetric)
     {
-      vty_out (vty, "Multi topology IS-IS can only be used with wide metrics%s", VTY_NEWLINE);
+      vty_out (vty,
+                 "Multi topology IS-IS can only be used with wide metrics\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
   if (mtid == (uint16_t)-1)
     {
-      vty_out (vty, "Don't know topology '%s'%s", arg, VTY_NEWLINE);
+      vty_out (vty, "Don't know topology '%s'\n", arg);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1316,13 +1309,14 @@ DEFUN (no_circuit_topology,
 
   if (circuit->area && circuit->area->oldmetric)
     {
-      vty_out (vty, "Multi topology IS-IS can only be used with wide metrics%s", VTY_NEWLINE);
+      vty_out (vty,
+                 "Multi topology IS-IS can only be used with wide metrics\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
   if (mtid == (uint16_t)-1)
     {
-      vty_out (vty, "Don't know topology '%s'%s", arg, VTY_NEWLINE);
+      vty_out (vty, "Don't know topology '%s'\n", arg);
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1340,7 +1334,7 @@ validate_metric_style_narrow (struct vty *vty, struct isis_area *area)
 
   if (! area)
     {
-      vty_out (vty, "ISIS area is invalid%s", VTY_NEWLINE);
+      vty_out (vty, "ISIS area is invalid\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1350,16 +1344,16 @@ validate_metric_style_narrow (struct vty *vty, struct isis_area *area)
           (circuit->is_type & IS_LEVEL_1) &&
           (circuit->te_metric[0] > MAX_NARROW_LINK_METRIC))
         {
-          vty_out (vty, "ISIS circuit %s metric is invalid%s",
-                   circuit->interface->name, VTY_NEWLINE);
+          vty_out (vty, "ISIS circuit %s metric is invalid\n",
+                   circuit->interface->name);
           return CMD_ERR_AMBIGUOUS;
         }
       if ((area->is_type & IS_LEVEL_2) &&
           (circuit->is_type & IS_LEVEL_2) &&
           (circuit->te_metric[1] > MAX_NARROW_LINK_METRIC))
         {
-          vty_out (vty, "ISIS circuit %s metric is invalid%s",
-                   circuit->interface->name, VTY_NEWLINE);
+          vty_out (vty, "ISIS circuit %s metric is invalid\n",
+                   circuit->interface->name);
           return CMD_ERR_AMBIGUOUS;
         }
     }
@@ -1387,7 +1381,8 @@ DEFUN (metric_style,
 
   if (area_is_mt(area))
     {
-      vty_out (vty, "Narrow metrics cannot be used while multi topology IS-IS is active%s", VTY_NEWLINE);
+      vty_out (vty,
+                 "Narrow metrics cannot be used while multi topology IS-IS is active\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1415,7 +1410,8 @@ DEFUN (no_metric_style,
 
   if (area_is_mt(area))
     {
-      vty_out (vty, "Narrow metrics cannot be used while multi topology IS-IS is active%s", VTY_NEWLINE);
+      vty_out (vty,
+                 "Narrow metrics cannot be used while multi topology IS-IS is active\n");
       return CMD_ERR_AMBIGUOUS;
     }
 
@@ -1430,8 +1426,7 @@ DEFUN (no_metric_style,
 DEFUN (set_overload_bit,
        set_overload_bit_cmd,
        "set-overload-bit",
-       "Set overload bit to avoid any transit traffic\n"
-       "Set overload bit\n")
+       "Set overload bit to avoid any transit traffic\n")
 {
   VTY_DECLVAR_CONTEXT (isis_area, area);
 
@@ -1454,8 +1449,7 @@ DEFUN (no_set_overload_bit,
 DEFUN (set_attached_bit,
        set_attached_bit_cmd,
        "set-attached-bit",
-       "Set attached bit to identify as L1/L2 router for inter-area traffic\n"
-       "Set attached bit\n")
+       "Set attached bit to identify as L1/L2 router for inter-area traffic\n")
 {
   VTY_DECLVAR_CONTEXT (isis_area, area);
 
@@ -1512,9 +1506,8 @@ static int area_lsp_mtu_set(struct vty *vty, unsigned int lsp_mtu)
         continue;
       if(lsp_mtu > isis_circuit_pdu_size(circuit))
         {
-          vty_out(vty, "ISIS area contains circuit %s, which has a maximum PDU size of %zu.%s",
-                  circuit->interface->name, isis_circuit_pdu_size(circuit),
-                  VTY_NEWLINE);
+          vty_out (vty, "ISIS area contains circuit %s, which has a maximum PDU size of %zu.\n",
+                  circuit->interface->name,isis_circuit_pdu_size(circuit));
           return CMD_ERR_AMBIGUOUS;
         }
     }
@@ -1532,7 +1525,7 @@ DEFUN (area_lsp_mtu,
   int idx_number = 1;
   unsigned int lsp_mtu;
 
-  VTY_GET_INTEGER_RANGE("lsp-mtu", lsp_mtu, argv[idx_number]->arg, 128, 4352);
+  lsp_mtu = strtoul(argv[idx_number]->arg, NULL, 10);
 
   return area_lsp_mtu_set(vty, lsp_mtu);
 }
@@ -1564,7 +1557,7 @@ DEFUN (is_type,
   type = string2circuit_t (argv[idx_level]->arg);
   if (!type)
     {
-      vty_out (vty, "Unknown IS level %s", VTY_NEWLINE);
+      vty_out (vty, "Unknown IS level \n");
       return CMD_SUCCESS;
     }
 
@@ -1614,8 +1607,8 @@ set_lsp_gen_interval (struct vty *vty, struct isis_area *area,
       if (interval >= area->lsp_refresh[lvl-1])
         {
           vty_out (vty, "LSP gen interval %us must be less than "
-                   "the LSP refresh interval %us%s",
-                   interval, area->lsp_refresh[lvl-1], VTY_NEWLINE);
+                   "the LSP refresh interval %us\n",
+                   interval, area->lsp_refresh[lvl - 1]);
           return CMD_ERR_AMBIGUOUS;
         }
     }
@@ -1853,18 +1846,17 @@ area_max_lsp_lifetime_set(struct vty *vty, int level,
       if (refresh_interval < area->lsp_refresh[lvl-1])
         {
           vty_out (vty, "Level %d Max LSP lifetime %us must be 300s greater than "
-                   "the configured LSP refresh interval %us%s",
-                   lvl, interval, area->lsp_refresh[lvl-1], VTY_NEWLINE);
+                   "the configured LSP refresh interval %us\n",
+                   lvl, interval, area->lsp_refresh[lvl - 1]);
           vty_out (vty, "Automatically reducing level %d LSP refresh interval "
-                   "to %us%s", lvl, refresh_interval, VTY_NEWLINE);
+                   "to %us\n", lvl, refresh_interval);
           set_refresh_interval[lvl-1] = 1;
 
           if (refresh_interval <= area->lsp_gen_interval[lvl-1])
             {
               vty_out (vty, "LSP refresh interval %us must be greater than "
-                       "the configured LSP gen interval %us%s",
-                       refresh_interval, area->lsp_gen_interval[lvl-1],
-                       VTY_NEWLINE);
+                       "the configured LSP gen interval %us\n",
+                       refresh_interval,area->lsp_gen_interval[lvl - 1]);
               return CMD_ERR_AMBIGUOUS;
             }
         }
@@ -1938,17 +1930,15 @@ area_lsp_refresh_interval_set(struct vty *vty, int level, uint16_t interval)
       if (interval <= area->lsp_gen_interval[lvl-1])
         {
           vty_out (vty, "LSP refresh interval %us must be greater than "
-                   "the configured LSP gen interval %us%s",
-                   interval, area->lsp_gen_interval[lvl-1],
-                   VTY_NEWLINE);
+                   "the configured LSP gen interval %us\n",
+                   interval,area->lsp_gen_interval[lvl - 1]);
           return CMD_ERR_AMBIGUOUS;
         }
       if (interval > (area->max_lsp_lifetime[lvl-1] - 300))
         {
           vty_out (vty, "LSP refresh interval %us must be less than "
-                   "the configured LSP lifetime %us less 300%s",
-                   interval, area->max_lsp_lifetime[lvl-1],
-                   VTY_NEWLINE);
+                   "the configured LSP lifetime %us less 300\n",
+                   interval,area->max_lsp_lifetime[lvl - 1]);
           return CMD_ERR_AMBIGUOUS;
         }
     }
@@ -2014,7 +2004,7 @@ area_passwd_set(struct vty *vty, int level,
 
   if (passwd && strlen(passwd) > 254)
     {
-      vty_out (vty, "Too long area password (>254)%s", VTY_NEWLINE);
+      vty_out (vty, "Too long area password (>254)\n");
       return CMD_ERR_AMBIGUOUS;
     }
 

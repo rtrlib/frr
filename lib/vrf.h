@@ -56,6 +56,20 @@ enum {
 #define VRF_CMD_HELP_STR    "Specify the VRF\nThe VRF name\n"
 #define VRF_ALL_CMD_HELP_STR    "Specify the VRF\nAll VRFs\n"
 
+/*
+ * Pass some OS specific data up through
+ * to the daemons
+ */
+struct vrf_data
+{
+  union
+  {
+    struct {
+      uint32_t table_id;
+    } l;
+  };
+};
+
 struct vrf
 {
   RB_ENTRY(vrf) id_entry, name_entry;
@@ -75,6 +89,9 @@ struct vrf
 
   /* User data */
   void *info;
+
+  /* The table_id from the kernel */
+  struct vrf_data data;
 
   QOBJ_FIELDS
 };
@@ -98,12 +115,12 @@ extern vrf_id_t vrf_name_to_id (const char *);
       struct vrf *vrf; \
       if (!(vrf = vrf_lookup_by_name(NAME))) \
         {                                                           \
-          vty_out (vty, "%% VRF %s not found%s", NAME, VTY_NEWLINE);\
+          vty_out (vty, "%% VRF %s not found\n", NAME);\
           return CMD_WARNING;                                       \
         }                                               \
       if (vrf->vrf_id == VRF_UNKNOWN) \
         { \
-          vty_out (vty, "%% VRF %s not active%s", NAME, VTY_NEWLINE);\
+          vty_out (vty, "%% VRF %s not active\n", NAME);\
           return CMD_WARNING;                                       \
         } \
       (V) = vrf->vrf_id; \

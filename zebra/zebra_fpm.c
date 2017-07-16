@@ -564,8 +564,8 @@ zfpm_conn_up_thread_cb (struct thread *thread)
       zfpm_g->stats.t_conn_up_yields++;
       zfpm_rnodes_iter_pause (iter);
       zfpm_g->t_conn_up = NULL;
-      thread_add_background(zfpm_g->master, zfpm_conn_up_thread_cb, 0, 0,
-                            &zfpm_g->t_conn_up);
+      thread_add_timer_msec (zfpm_g->master, zfpm_conn_up_thread_cb, NULL, 0,
+                             &zfpm_g->t_conn_up);
       return 0;
     }
 
@@ -598,7 +598,7 @@ zfpm_connection_up (const char *detail)
 
   zfpm_debug ("Starting conn_up thread");
   zfpm_g->t_conn_up = NULL;
-  thread_add_background(zfpm_g->master, zfpm_conn_up_thread_cb, 0, 0,
+  thread_add_timer_msec(zfpm_g->master, zfpm_conn_up_thread_cb, NULL, 0,
                         &zfpm_g->t_conn_up);
   zfpm_g->stats.t_conn_up_starts++;
 }
@@ -688,7 +688,7 @@ zfpm_conn_down_thread_cb (struct thread *thread)
       zfpm_g->stats.t_conn_down_yields++;
       zfpm_rnodes_iter_pause (iter);
       zfpm_g->t_conn_down = NULL;
-      thread_add_background(zfpm_g->master, zfpm_conn_down_thread_cb, 0, 0,
+      thread_add_timer_msec(zfpm_g->master, zfpm_conn_down_thread_cb, NULL, 0,
                             &zfpm_g->t_conn_down);
       return 0;
     }
@@ -736,7 +736,7 @@ zfpm_connection_down (const char *detail)
   zfpm_debug ("Starting conn_down thread");
   zfpm_rnodes_iter_init (&zfpm_g->t_conn_down_state.iter);
   zfpm_g->t_conn_down = NULL;
-  thread_add_background(zfpm_g->master, zfpm_conn_down_thread_cb, 0, 0,
+  thread_add_timer_msec(zfpm_g->master, zfpm_conn_down_thread_cb, NULL, 0,
                         &zfpm_g->t_conn_down);
   zfpm_g->stats.t_conn_down_starts++;
 
@@ -866,7 +866,7 @@ zfpm_writes_pending (void)
  * value indicates an error.
  */
 static inline int
-zfpm_encode_route (rib_dest_t *dest, struct rib *rib, char *in_buf,
+zfpm_encode_route (rib_dest_t *dest, struct route_entry *re, char *in_buf,
 		   size_t in_buf_len, fpm_msg_type_e *msg_type)
 {
   size_t len;
@@ -881,7 +881,7 @@ zfpm_encode_route (rib_dest_t *dest, struct rib *rib, char *in_buf,
 
   case ZFPM_MSG_FORMAT_PROTOBUF:
 #ifdef HAVE_PROTOBUF
-    len = zfpm_protobuf_encode_route (dest, rib, (uint8_t *) in_buf,
+    len = zfpm_protobuf_encode_route (dest, re, (uint8_t *) in_buf,
 				      in_buf_len);
     *msg_type = FPM_MSG_TYPE_PROTOBUF;
 #endif
@@ -890,8 +890,8 @@ zfpm_encode_route (rib_dest_t *dest, struct rib *rib, char *in_buf,
   case ZFPM_MSG_FORMAT_NETLINK:
 #ifdef HAVE_NETLINK
     *msg_type = FPM_MSG_TYPE_NETLINK;
-    cmd = rib ? RTM_NEWROUTE : RTM_DELROUTE;
-    len = zfpm_netlink_encode_route (cmd, dest, rib, in_buf, in_buf_len);
+    cmd = re ? RTM_NEWROUTE : RTM_DELROUTE;
+    len = zfpm_netlink_encode_route (cmd, dest, re, in_buf, in_buf_len);
     assert(fpm_msg_align(len) == len);
     *msg_type = FPM_MSG_TYPE_NETLINK;
 #endif /* HAVE_NETLINK */
@@ -908,19 +908,19 @@ zfpm_encode_route (rib_dest_t *dest, struct rib *rib, char *in_buf,
 /*
  * zfpm_route_for_update
  *
- * Returns the rib that is to be sent to the FPM for a given dest.
+ * Returns the re that is to be sent to the FPM for a given dest.
  */
-struct rib *
+struct route_entry *
 zfpm_route_for_update (rib_dest_t *dest)
 {
-  struct rib *rib;
+  struct route_entry *re;
 
-  RIB_DEST_FOREACH_ROUTE (dest, rib)
+  RE_DEST_FOREACH_ROUTE (dest, re)
     {
-      if (!CHECK_FLAG (rib->status, RIB_ENTRY_SELECTED_FIB))
+      if (!CHECK_FLAG (re->status, ROUTE_ENTRY_SELECTED_FIB))
 	continue;
 
-      return rib;
+      return re;
     }
 
   /*
@@ -944,7 +944,7 @@ zfpm_build_updates (void)
   size_t msg_len;
   size_t data_len;
   fpm_msg_hdr_t *hdr;
-  struct rib *rib;
+  struct route_entry *re;
   int is_add, write_msg;
   fpm_msg_type_e msg_type;
 
@@ -974,8 +974,8 @@ zfpm_build_updates (void)
 
     data = fpm_msg_data (hdr);
 
-    rib = zfpm_route_for_update (dest);
-    is_add = rib ? 1 : 0;
+    re = zfpm_route_for_update (dest);
+    is_add = re ? 1 : 0;
 
     write_msg = 1;
 
@@ -990,7 +990,7 @@ zfpm_build_updates (void)
       }
 
     if (write_msg) {
-      data_len = zfpm_encode_route (dest, rib, (char *) data, buf_end - data,
+      data_len = zfpm_encode_route (dest, re, (char *) data, buf_end - data,
 				    &msg_type);
 
       assert (data_len);
@@ -1438,8 +1438,8 @@ zfpm_start_stats_timer (void)
  */
 #define ZFPM_SHOW_STAT(counter)						\
   do {									\
-    vty_out (vty, "%-40s %10lu %16lu%s", #counter, total_stats.counter,	\
-	     zfpm_g->last_ivl_stats.counter, VTY_NEWLINE);		\
+    vty_out (vty, "%-40s %10lu %16lu\n", #counter, total_stats.counter,	\
+	     zfpm_g->last_ivl_stats.counter);		\
   } while (0)
 
 /*
@@ -1451,8 +1451,8 @@ zfpm_show_stats (struct vty *vty)
   zfpm_stats_t total_stats;
   time_t elapsed;
 
-  vty_out (vty, "%s%-40s %10s     Last %2d secs%s%s", VTY_NEWLINE, "Counter",
-	   "Total", ZFPM_STATS_IVL_SECS, VTY_NEWLINE, VTY_NEWLINE);
+  vty_out (vty, "\n%-40s %10s     Last %2d secs\n\n", "Counter",
+	   "Total", ZFPM_STATS_IVL_SECS);
 
   /*
    * Compute the total stats up to this instant.
@@ -1490,8 +1490,8 @@ zfpm_show_stats (struct vty *vty)
 
   elapsed = zfpm_get_elapsed_time (zfpm_g->last_stats_clear_time);
 
-  vty_out (vty, "%sStats were cleared %lu seconds ago%s", VTY_NEWLINE,
-	   (unsigned long) elapsed, VTY_NEWLINE);
+  vty_out (vty, "\nStats were cleared %lu seconds ago\n",
+	   (unsigned long)elapsed);
 }
 
 /*
@@ -1502,7 +1502,7 @@ zfpm_clear_stats (struct vty *vty)
 {
   if (!zfpm_is_enabled ())
     {
-      vty_out (vty, "The FPM module is not enabled...%s", VTY_NEWLINE);
+      vty_out (vty, "The FPM module is not enabled...\n");
       return;
     }
 
@@ -1515,7 +1515,7 @@ zfpm_clear_stats (struct vty *vty)
 
   zfpm_g->last_stats_clear_time = monotime(NULL);
 
-  vty_out (vty, "Cleared FPM stats%s", VTY_NEWLINE);
+  vty_out (vty, "Cleared FPM stats\n");
 }
 
 /*
@@ -1671,7 +1671,8 @@ static int fpm_remote_srv_write (struct vty *vty)
 
    if (zfpm_g->fpm_server != FPM_DEFAULT_IP || 
           zfpm_g->fpm_port != FPM_DEFAULT_PORT)
-      vty_out (vty,"fpm connection ip %s port %d%s", inet_ntoa (in),zfpm_g->fpm_port,VTY_NEWLINE);
+      vty_out (vty,"fpm connection ip %s port %d\n", inet_ntoa (in),
+                 zfpm_g->fpm_port);
 
    return 0;
 }

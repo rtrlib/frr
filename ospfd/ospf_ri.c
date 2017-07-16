@@ -906,10 +906,9 @@ show_vty_router_cap (struct vty *vty, struct ri_tlv_header *tlvh)
   struct ri_tlv_router_cap *top = (struct ri_tlv_router_cap *) tlvh;
 
   if (vty != NULL)
-    vty_out (vty, "  Router Capabilities: 0x%x%s", ntohl (top->value),
-             VTY_NEWLINE);
-  else
-    zlog_debug ("    Router Capabilities: 0x%x", ntohl (top->value));
+    vty_out (vty, "  Router Capabilities: 0x%x\n",ntohl(top->value));
+    else
+      zlog_debug ("    Router Capabilities: 0x%x", ntohl (top->value));
 
   return RI_TLV_SIZE (tlvh);
 }
@@ -922,20 +921,19 @@ show_vty_pce_subtlv_address (struct vty *vty, struct ri_tlv_header *tlvh)
   if (ntohs (top->address.type) == PCE_ADDRESS_TYPE_IPV4)
     {
       if (vty != NULL)
-        vty_out (vty, "  PCE Address: %s%s", inet_ntoa (top->address.value),
-                 VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE Address: %s", inet_ntoa (top->address.value));
+        vty_out (vty, "  PCE Address: %s\n",inet_ntoa(top->address.value));
+        else
+          zlog_debug ("    PCE Address: %s", inet_ntoa (top->address.value));
     }
   else
     {
       /* TODO: Add support to IPv6 with inet_ntop() */
       if (vty != NULL)
-        vty_out (vty, "  PCE Address: 0x%x%s",
-                 ntohl (top->address.value.s_addr), VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE Address: 0x%x",
-                    ntohl (top->address.value.s_addr));
+        vty_out (vty, "  PCE Address: 0x%x\n",
+                 ntohl(top->address.value.s_addr));
+        else
+          zlog_debug ("    PCE Address: 0x%x",
+	                    ntohl (top->address.value.s_addr));
     }
 
   return RI_TLV_SIZE (tlvh);
@@ -948,10 +946,9 @@ show_vty_pce_subtlv_path_scope (struct vty *vty, struct ri_tlv_header *tlvh)
     (struct ri_pce_subtlv_path_scope *) tlvh;
 
   if (vty != NULL)
-    vty_out (vty, "  PCE Path Scope: 0x%x%s", ntohl (top->value),
-             VTY_NEWLINE);
-  else
-    zlog_debug ("    PCE Path Scope: 0x%x", ntohl (top->value));
+    vty_out (vty, "  PCE Path Scope: 0x%x\n",ntohl(top->value));
+    else
+      zlog_debug ("    PCE Path Scope: 0x%x", ntohl (top->value));
 
   return RI_TLV_SIZE (tlvh);
 }
@@ -966,18 +963,16 @@ show_vty_pce_subtlv_domain (struct vty *vty, struct ri_tlv_header *tlvh)
     {
       tmp.s_addr = top->value;
       if (vty != NULL)
-        vty_out (vty, "  PCE domain Area: %s%s", inet_ntoa (tmp),
-                 VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE domain Area: %s", inet_ntoa (tmp));
+        vty_out (vty, "  PCE domain Area: %s\n",inet_ntoa(tmp));
+        else
+          zlog_debug ("    PCE domain Area: %s", inet_ntoa (tmp));
     }
   else
     {
       if (vty != NULL)
-        vty_out (vty, "  PCE domain AS: %d%s", ntohl (top->value),
-                 VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE domain AS: %d", ntohl (top->value));
+        vty_out (vty, "  PCE domain AS: %d\n",ntohl(top->value));
+        else
+          zlog_debug ("    PCE domain AS: %d", ntohl (top->value));
     }
   return RI_TLV_SIZE (tlvh);
 }
@@ -993,18 +988,16 @@ show_vty_pce_subtlv_neighbor (struct vty *vty, struct ri_tlv_header *tlvh)
     {
       tmp.s_addr = top->value;
       if (vty != NULL)
-        vty_out (vty, "  PCE neighbor Area: %s%s", inet_ntoa (tmp),
-                 VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE neighbor Area: %s", inet_ntoa (tmp));
+        vty_out (vty, "  PCE neighbor Area: %s\n",inet_ntoa(tmp));
+        else
+          zlog_debug ("    PCE neighbor Area: %s", inet_ntoa (tmp));
     }
   else
     {
       if (vty != NULL)
-        vty_out (vty, "  PCE neighbor AS: %d%s", ntohl (top->value),
-                 VTY_NEWLINE);
-      else
-        zlog_debug ("    PCE neighbor AS: %d", ntohl (top->value));
+        vty_out (vty, "  PCE neighbor AS: %d\n",ntohl(top->value));
+        else
+          zlog_debug ("    PCE neighbor AS: %d", ntohl (top->value));
     }
   return RI_TLV_SIZE (tlvh);
 }
@@ -1015,10 +1008,9 @@ show_vty_pce_subtlv_cap_flag (struct vty *vty, struct ri_tlv_header *tlvh)
   struct ri_pce_subtlv_cap_flag *top = (struct ri_pce_subtlv_cap_flag *) tlvh;
 
   if (vty != NULL)
-    vty_out (vty, "  PCE Capabilities Flag: 0x%x%s", ntohl (top->value),
-             VTY_NEWLINE);
-  else
-    zlog_debug ("    PCE Capabilities Flag: 0x%x", ntohl (top->value));
+    vty_out (vty, "  PCE Capabilities Flag: 0x%x\n",ntohl(top->value));
+    else
+      zlog_debug ("    PCE Capabilities Flag: 0x%x", ntohl (top->value));
 
   return RI_TLV_SIZE (tlvh);
 }
@@ -1027,11 +1019,11 @@ static u_int16_t
 show_vty_unknown_tlv (struct vty *vty, struct ri_tlv_header *tlvh)
 {
   if (vty != NULL)
-    vty_out (vty, "  Unknown TLV: [type(0x%x), length(0x%x)]%s",
-             ntohs (tlvh->type), ntohs (tlvh->length), VTY_NEWLINE);
-  else
-    zlog_debug ("    Unknown TLV: [type(0x%x), length(0x%x)]",
-                ntohs (tlvh->type), ntohs (tlvh->length));
+    vty_out (vty, "  Unknown TLV: [type(0x%x), length(0x%x)]\n",
+             ntohs (tlvh->type), ntohs(tlvh->length));
+    else
+      zlog_debug ("    Unknown TLV: [type(0x%x), length(0x%x)]",
+	                ntohs (tlvh->type), ntohs (tlvh->length));
 
   return RI_TLV_SIZE (tlvh);
 }
@@ -1113,18 +1105,16 @@ ospf_router_info_config_write_router (struct vty *vty)
   if (OspfRI.status == enabled)
     {
       if (OspfRI.scope == OSPF_OPAQUE_AS_LSA)
-        vty_out (vty, " router-info as%s", VTY_NEWLINE);
+        vty_out (vty, " router-info as\n");
       else
-        vty_out (vty, " router-info area %s%s", inet_ntoa (OspfRI.area_id),
-                 VTY_NEWLINE);
+        vty_out (vty, " router-info area %s\n",inet_ntoa(OspfRI.area_id));
 
       if (pce->pce_address.header.type != 0)
-        vty_out (vty, "  pce address %s%s",
-                 inet_ntoa (pce->pce_address.address.value), VTY_NEWLINE);
+        vty_out (vty, "  pce address %s\n",
+                 inet_ntoa(pce->pce_address.address.value));
 
       if (pce->pce_cap_flag.header.type != 0)
-        vty_out (vty, "  pce flag 0x%x%s", ntohl (pce->pce_cap_flag.value),
-                 VTY_NEWLINE);
+        vty_out (vty, "  pce flag 0x%x\n",ntohl(pce->pce_cap_flag.value));
 
       for (ALL_LIST_ELEMENTS_RO (pce->pce_domain, node, domain))
         {
@@ -1133,13 +1123,11 @@ ospf_router_info_config_write_router (struct vty *vty)
               if (domain->type == PCE_DOMAIN_TYPE_AREA)
                 {
                   tmp.s_addr = domain->value;
-                  vty_out (vty, "  pce domain area %s%s", inet_ntoa (tmp),
-                           VTY_NEWLINE);
+                  vty_out (vty, "  pce domain area %s\n",inet_ntoa(tmp));
                 }
               else
                 {
-                  vty_out (vty, "  pce domain as %d%s", ntohl (domain->value),
-                           VTY_NEWLINE);
+                  vty_out (vty, "  pce domain as %d\n",ntohl(domain->value));
                 }
             }
         }
@@ -1151,20 +1139,19 @@ ospf_router_info_config_write_router (struct vty *vty)
               if (neighbor->type == PCE_DOMAIN_TYPE_AREA)
                 {
                   tmp.s_addr = neighbor->value;
-                  vty_out (vty, "  pce neighbor area %s%s", inet_ntoa (tmp),
-                           VTY_NEWLINE);
+                  vty_out (vty, "  pce neighbor area %s\n",inet_ntoa(tmp));
                 }
               else
                 {
-                  vty_out (vty, "  pce neighbor as %d%s",
-                           ntohl (neighbor->value), VTY_NEWLINE);
+                  vty_out (vty, "  pce neighbor as %d\n",
+                           ntohl(neighbor->value));
                 }
             }
         }
 
       if (pce->pce_scope.header.type != 0)
-        vty_out (vty, "  pce scope 0x%x%s",
-                 ntohl (OspfRI.pce_info.pce_scope.value), VTY_NEWLINE);
+        vty_out (vty, "  pce scope 0x%x\n",
+                 ntohl(OspfRI.pce_info.pce_scope.value));
     }
   return;
 }
@@ -1192,7 +1179,12 @@ DEFUN (router_info,
   /* Check and get Area value if present */
   if (area)
     {
-      inet_aton (area, &OspfRI.area_id);
+      if (!inet_aton (area, &OspfRI.area_id))
+        {
+          vty_out (vty, "%% specified Area ID %s is invalid\n",
+                   area);
+          return CMD_WARNING_CONFIG_FAILED;
+        }
       scope = OSPF_OPAQUE_AREA_LSA;
     }
   else
@@ -1205,7 +1197,7 @@ DEFUN (router_info,
   if ((ospf_router_info_register (scope)) != 0)
     {
       zlog_warn ("Enable to register Router Information callbacks. Abort!");
-      return CMD_WARNING;
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   OspfRI.status = enabled;
@@ -1265,7 +1257,7 @@ ospf_ri_enabled (struct vty *vty)
     return 1;
 
   if (vty)
-    vty_out (vty, "%% OSPF RI is not turned on%s", VTY_NEWLINE);
+    vty_out (vty, "%% OSPF RI is not turned on\n");
 
   return 0;
 }
@@ -1282,12 +1274,12 @@ DEFUN (pce_address,
   struct ospf_pce_info *pi = &OspfRI.pce_info;
 
   if (!ospf_ri_enabled (vty))
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   if (!inet_aton (argv[idx_ipv4]->arg, &value))
     {
-      vty_out (vty, "Please specify PCE Address by A.B.C.D%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Please specify PCE Address by A.B.C.D\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ntohs (pi->pce_address.header.type) == 0
@@ -1334,13 +1326,12 @@ DEFUN (pce_path_scope,
   struct ospf_pce_info *pi = &OspfRI.pce_info;
 
   if (!ospf_ri_enabled (vty))
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   if (sscanf (argv[idx_bitpattern]->arg, "0x%x", &scope) != 1)
     {
-      vty_out (vty, "pce_path_scope: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "pce_path_scope: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ntohl (pi->pce_scope.header.type) == 0 || scope != pi->pce_scope.value)
@@ -1389,13 +1380,12 @@ DEFUN (pce_domain,
   struct ri_pce_subtlv_domain *domain;
 
   if (!ospf_ri_enabled (vty))
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   if (sscanf (argv[idx_number]->arg, "%d", &as) != 1)
     {
-      vty_out (vty, "pce_domain: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "pce_domain: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Check if the domain is not already in the domain list */
@@ -1431,9 +1421,8 @@ DEFUN (no_pce_domain,
 
   if (sscanf (argv[idx_number]->arg, "%d", &as) != 1)
     {
-      vty_out (vty, "no_pce_domain: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "no_pce_domain: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Unset corresponding PCE domain */
@@ -1462,13 +1451,12 @@ DEFUN (pce_neigbhor,
   struct ri_pce_subtlv_neighbor *neighbor;
 
   if (!ospf_ri_enabled (vty))
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   if (sscanf (argv[idx_number]->arg, "%d", &as) != 1)
     {
-      vty_out (vty, "pce_neighbor: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "pce_neighbor: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Check if the domain is not already in the domain list */
@@ -1504,9 +1492,8 @@ DEFUN (no_pce_neighbor,
 
   if (sscanf (argv[idx_number]->arg, "%d", &as) != 1)
     {
-      vty_out (vty, "no_pce_neighbor: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "no_pce_neighbor: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Unset corresponding PCE domain */
@@ -1532,13 +1519,12 @@ DEFUN (pce_cap_flag,
   struct ospf_pce_info *pce = &OspfRI.pce_info;
 
   if (!ospf_ri_enabled (vty))
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   if (sscanf (argv[idx_bitpattern]->arg, "0x%x", &cap) != 1)
     {
-      vty_out (vty, "pce_cap_flag: fscanf: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "pce_cap_flag: fscanf: %s\n",safe_strerror(errno));
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ntohl (pce->pce_cap_flag.header.type) == 0
@@ -1582,13 +1568,13 @@ DEFUN (show_ip_ospf_router_info,
 
   if (OspfRI.status == enabled)
     {
-      vty_out (vty, "--- Router Information parameters ---%s", VTY_NEWLINE);
+      vty_out (vty, "--- Router Information parameters ---\n");
       show_vty_router_cap (vty, &OspfRI.router_cap.header);
     }
   else
     {
       if (vty != NULL)
-        vty_out (vty, "  Router Information is disabled on this router%s", VTY_NEWLINE);
+        vty_out (vty, "  Router Information is disabled on this router\n");
     }
   return CMD_SUCCESS;
 }
@@ -1610,7 +1596,7 @@ DEFUN (show_ip_opsf_router_info_pce,
 
   if (OspfRI.status == enabled)
     {
-      vty_out (vty, "--- PCE parameters ---%s", VTY_NEWLINE);
+      vty_out (vty, "--- PCE parameters ---\n");
 
       if (pce->pce_address.header.type != 0)
         show_vty_pce_subtlv_address (vty, &pce->pce_address.header);
@@ -1636,8 +1622,7 @@ DEFUN (show_ip_opsf_router_info_pce,
     }
   else
     {
-      vty_out (vty, "  Router Information is disabled on this router%s",
-               VTY_NEWLINE);
+      vty_out (vty,"  Router Information is disabled on this router\n");
     }
 
   return CMD_SUCCESS;

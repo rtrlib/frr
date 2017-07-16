@@ -86,7 +86,7 @@ static const struct message rip_msg[] =
   {RIP_TRACEOFF,   "TRACEOFF"},
   {RIP_POLL,       "POLL"},
   {RIP_POLL_ENTRY, "POLL ENTRY"},
-  {0, NULL},
+  { 0 }
 };
 
 /* Utility function to set boradcast option to the socket. */
@@ -701,7 +701,7 @@ rip_packet_dump (struct rip_packet *packet, int size, const char *sndrcv)
 
   /* Set command string. */
   if (packet->command > 0 && packet->command < RIP_COMMAND_MAX)
-    command_str = lookup (rip_msg, packet->command);
+    command_str = lookup_msg (rip_msg, packet->command, NULL);
   else
     command_str = "unknown";
 
@@ -2044,12 +2044,12 @@ rip_read (struct thread *t)
     case RIP_TRACEON:
     case RIP_TRACEOFF:
       zlog_info ("Obsolete command %s received, please sent it to routed", 
-		 lookup (rip_msg, packet->command));
+		 lookup_msg (rip_msg, packet->command, NULL));
       rip_peer_bad_packet (&from);
       break;
     case RIP_POLL_ENTRY:
       zlog_info ("Obsolete command %s received", 
-		 lookup (rip_msg, packet->command));
+		 lookup_msg (rip_msg, packet->command, NULL));
       rip_peer_bad_packet (&from);
       break;
     default:
@@ -2815,7 +2815,7 @@ DEFUN_NOSH (router_rip,
       if (ret < 0)
 	{
 	  zlog_info ("Can't create RIP");
-	  return CMD_WARNING;
+          return CMD_WARNING_CONFIG_FAILED;
 	}
     }
   VTY_PUSH_CONTEXT(RIP_NODE, rip);
@@ -2847,9 +2847,8 @@ DEFUN (rip_version,
   version = atoi (argv[idx_number]->arg);
   if (version != RIPv1 && version != RIPv2)
     {
-      vty_out (vty, "invalid rip version %d%s", version,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "invalid rip version %d\n",version);
+      return CMD_WARNING_CONFIG_FAILED;
     }
   rip->version_send = version;
   rip->version_recv = version;
@@ -2886,8 +2885,8 @@ DEFUN (rip_route,
   ret = str2prefix_ipv4 (argv[idx_ipv4_prefixlen]->arg, &p);
   if (ret < 0)
     {
-      vty_out (vty, "Malformed address%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed address\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   apply_mask_ipv4 (&p);
 
@@ -2896,9 +2895,9 @@ DEFUN (rip_route,
 
   if (node->info)
     {
-      vty_out (vty, "There is already same static route.%s", VTY_NEWLINE);
+      vty_out (vty, "There is already same static route.\n");
       route_unlock_node (node);
-      return CMD_WARNING;
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   node->info = (void *)1;
@@ -2923,8 +2922,8 @@ DEFUN (no_rip_route,
   ret = str2prefix_ipv4 (argv[idx_ipv4_prefixlen]->arg, &p);
   if (ret < 0)
     {
-      vty_out (vty, "Malformed address%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed address\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   apply_mask_ipv4 (&p);
 
@@ -2932,9 +2931,8 @@ DEFUN (no_rip_route,
   node = route_node_lookup (rip->route, (struct prefix *) &p);
   if (! node)
     {
-      vty_out (vty, "Can't find route %s.%s", argv[idx_ipv4_prefixlen]->arg,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find route %s.\n",argv[idx_ipv4_prefixlen]->arg);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rip_redistribute_delete (ZEBRA_ROUTE_RIP, RIP_ROUTE_STATIC, &p, 0);
@@ -3016,22 +3014,22 @@ DEFUN (rip_timers,
   update = strtoul (argv[idx_number]->arg, &endptr, 10);
   if (update > RIP_TIMER_MAX || update < RIP_TIMER_MIN || *endptr != '\0')  
     {
-      vty_out (vty, "update timer value error%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "update timer value error\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   
   timeout = strtoul (argv[idx_number_2]->arg, &endptr, 10);
   if (timeout > RIP_TIMER_MAX || timeout < RIP_TIMER_MIN || *endptr != '\0') 
     {
-      vty_out (vty, "timeout timer value error%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "timeout timer value error\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   
   garbage = strtoul (argv[idx_number_3]->arg, &endptr, 10);
   if (garbage > RIP_TIMER_MAX || garbage < RIP_TIMER_MIN || *endptr != '\0') 
     {
-      vty_out (vty, "garbage timer value error%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "garbage timer value error\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Set each timer value. */
@@ -3104,8 +3102,8 @@ rip_distance_set (struct vty *vty, const char *distance_str, const char *ip_str,
   ret = str2prefix_ipv4 (ip_str, &p);
   if (ret == 0)
     {
-      vty_out (vty, "Malformed prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   distance = atoi (distance_str);
@@ -3150,15 +3148,15 @@ rip_distance_unset (struct vty *vty, const char *distance_str,
   ret = str2prefix_ipv4 (ip_str, &p);
   if (ret == 0)
     {
-      vty_out (vty, "Malformed prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rn = route_node_lookup (rip_distance_table, (struct prefix *)&p);
   if (! rn)
     {
-      vty_out (vty, "Can't find specified prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find specified prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rdistance = rn->info;
@@ -3243,24 +3241,21 @@ rip_distance_show (struct vty *vty)
   int header = 1;
   char buf[BUFSIZ];
   
-  vty_out (vty, "  Distance: (default is %d)%s",
-	   rip->distance ? rip->distance :ZEBRA_RIP_DISTANCE_DEFAULT,
-	   VTY_NEWLINE);
+  vty_out (vty, "  Distance: (default is %d)\n",
+	   rip->distance ? rip->distance : ZEBRA_RIP_DISTANCE_DEFAULT);
 
   for (rn = route_top (rip_distance_table); rn; rn = route_next (rn))
     if ((rdistance = rn->info) != NULL)
       {
 	if (header)
 	  {
-	    vty_out (vty, "    Address           Distance  List%s",
-		     VTY_NEWLINE);
+	    vty_out (vty,"    Address           Distance  List\n");
 	    header = 0;
 	  }
 	sprintf (buf, "%s/%d", inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen);
-	vty_out (vty, "    %-20s  %4d  %s%s",
+	vty_out (vty, "    %-20s  %4d  %s\n",
 		 buf, rdistance->distance,
-		 rdistance->access_list ? rdistance->access_list : "",
-		 VTY_NEWLINE);
+		 rdistance->access_list ? rdistance->access_list : "");
       }
 }
 
@@ -3391,8 +3386,8 @@ DEFUN (rip_allow_ecmp,
 {
   if (rip->ecmp)
     {
-      vty_out (vty, "ECMP is already enabled.%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "ECMP is already enabled.\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rip->ecmp = 1;
@@ -3408,8 +3403,8 @@ DEFUN (no_rip_allow_ecmp,
 {
   if (!rip->ecmp)
     {
-      vty_out (vty, "ECMP is already disabled.%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "ECMP is already disabled.\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rip->ecmp = 0;
@@ -3479,12 +3474,11 @@ DEFUN (show_ip_rip,
   if (! rip)
     return CMD_SUCCESS;
 
-  vty_out (vty, "Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP%s"
-	   "Sub-codes:%s"
-           "      (n) - normal, (s) - static, (d) - default, (r) - redistribute,%s"
-	   "      (i) - interface%s%s"
-	   "     Network            Next Hop         Metric From            Tag Time%s",
-	   VTY_NEWLINE, VTY_NEWLINE,  VTY_NEWLINE, VTY_NEWLINE, VTY_NEWLINE, VTY_NEWLINE);
+  vty_out (vty, "Codes: R - RIP, C - connected, S - Static, O - OSPF, B - BGP\n"
+	   "Sub-codes:\n"
+           "      (n) - normal, (s) - static, (d) - default, (r) - redistribute,\n"
+	   "      (i) - interface\n\n"
+	   "     Network            Next Hop         Metric From            Tag Time\n");
   
   for (np = route_top (rip->table); np; np = route_next (np))
     if ((list = np->info) != NULL)
@@ -3539,7 +3533,7 @@ DEFUN (show_ip_rip,
 	    vty_out (vty, "%3"ROUTE_TAG_PRI, (route_tag_t)rinfo->tag);
 	  }
 
-	vty_out (vty, "%s", VTY_NEWLINE);
+	vty_out (vty, "\n");
       }
   return CMD_SUCCESS;
 }
@@ -3563,37 +3557,35 @@ DEFUN (show_ip_rip_status,
   if (! rip)
     return CMD_SUCCESS;
 
-  vty_out (vty, "Routing Protocol is \"rip\"%s", VTY_NEWLINE);
+  vty_out (vty, "Routing Protocol is \"rip\"\n");
   vty_out (vty, "  Sending updates every %ld seconds with +/-50%%,",
 	   rip->update_time);
-  vty_out (vty, " next due in %lu seconds%s", 
-	   thread_timer_remain_second(rip->t_update),
-	   VTY_NEWLINE);
+  vty_out (vty, " next due in %lu seconds\n", 
+	   thread_timer_remain_second(rip->t_update));
   vty_out (vty, "  Timeout after %ld seconds,", rip->timeout_time);
-  vty_out (vty, " garbage collect after %ld seconds%s", rip->garbage_time,
-	   VTY_NEWLINE);
+  vty_out (vty, " garbage collect after %ld seconds\n",rip->garbage_time);
 
   /* Filtering status show. */
   config_show_distribute (vty);
 		 
   /* Default metric information. */
-  vty_out (vty, "  Default redistribution metric is %d%s",
-	   rip->default_metric, VTY_NEWLINE);
+  vty_out (vty, "  Default redistribution metric is %d\n",
+	   rip->default_metric);
 
   /* Redistribute information. */
   vty_out (vty, "  Redistributing:");
   config_write_rip_redistribute (vty, 0);
-  vty_out (vty, "%s", VTY_NEWLINE);
+  vty_out (vty, "\n");
 
   vty_out (vty, "  Default version control: send version %s,",
-	   lookup(ri_version_msg,rip->version_send));
+	   lookup_msg(ri_version_msg,rip->version_send, NULL));
   if (rip->version_recv == RI_RIP_VERSION_1_AND_2)
-    vty_out (vty, " receive any version %s", VTY_NEWLINE);
+    vty_out (vty, " receive any version \n");
   else
-    vty_out (vty, " receive version %s %s",
-	     lookup(ri_version_msg,rip->version_recv), VTY_NEWLINE);
+    vty_out (vty, " receive version %s \n",
+	       lookup_msg(ri_version_msg,rip->version_recv, NULL));
 
-  vty_out (vty, "    Interface        Send  Recv   Key-chain%s", VTY_NEWLINE);
+  vty_out (vty, "    Interface        Send  Recv   Key-chain\n");
 
   for (ALL_LIST_ELEMENTS_RO (vrf_iflist (VRF_DEFAULT), node, ifp))
     {
@@ -3605,24 +3597,23 @@ DEFUN (show_ip_rip_status,
       if (ri->enable_network || ri->enable_interface)
 	{
 	  if (ri->ri_send == RI_RIP_UNSPEC)
-	    send_version = lookup (ri_version_msg, rip->version_send);
+	    send_version = lookup_msg(ri_version_msg, rip->version_send, NULL);
 	  else
-	    send_version = lookup (ri_version_msg, ri->ri_send);
+	    send_version = lookup_msg(ri_version_msg, ri->ri_send, NULL);
 
 	  if (ri->ri_receive == RI_RIP_UNSPEC)
-	    receive_version = lookup (ri_version_msg, rip->version_recv);
+	    receive_version = lookup_msg(ri_version_msg, rip->version_recv, NULL);
 	  else
-	    receive_version = lookup (ri_version_msg, ri->ri_receive);
+	    receive_version = lookup_msg(ri_version_msg, ri->ri_receive, NULL);
 	
-	  vty_out (vty, "    %-17s%-3s   %-3s    %s%s", ifp->name,
+	  vty_out (vty, "    %-17s%-3s   %-3s    %s\n", ifp->name,
 		   send_version,
 		   receive_version,
-		   ri->key_chain ? ri->key_chain : "",
-		   VTY_NEWLINE);
+		   ri->key_chain ? ri->key_chain : "");
 	}
     }
 
-  vty_out (vty, "  Routing for Networks:%s", VTY_NEWLINE);
+  vty_out (vty, "  Routing for Networks:\n");
   config_write_rip_network (vty, 0);  
 
   {
@@ -3635,16 +3626,17 @@ DEFUN (show_ip_rip_status,
 	  {
 	    if (!found_passive)
 	      {
-		vty_out (vty, "  Passive Interface(s):%s", VTY_NEWLINE);
+		vty_out (vty, "  Passive Interface(s):\n");
 		found_passive = 1;
 	      }
-	    vty_out (vty, "    %s%s", ifp->name, VTY_NEWLINE);
+	    vty_out (vty, "    %s\n", ifp->name);
 	  }
       }
   }
 
-  vty_out (vty, "  Routing Information Sources:%s", VTY_NEWLINE);
-  vty_out (vty, "    Gateway          BadPackets BadRoutes  Distance Last Update%s", VTY_NEWLINE);
+  vty_out (vty, "  Routing Information Sources:\n");
+  vty_out (vty,
+             "    Gateway          BadPackets BadRoutes  Distance Last Update\n");
   rip_peer_display (vty);
 
   rip_distance_show (vty);
@@ -3663,34 +3655,31 @@ config_write_rip (struct vty *vty)
   if (rip)
     {
       /* Router RIP statement. */
-      vty_out (vty, "router rip%s", VTY_NEWLINE);
+      vty_out (vty, "router rip\n");
       write++;
   
       /* RIP version statement.  Default is RIP version 2. */
       if (rip->version_send != RI_RIP_VERSION_2
 	  || rip->version_recv != RI_RIP_VERSION_1_AND_2)
-	vty_out (vty, " version %d%s", rip->version_send,
-		 VTY_NEWLINE);
+	vty_out (vty, " version %d\n",rip->version_send);
  
       /* RIP timer configuration. */
       if (rip->update_time != RIP_UPDATE_TIMER_DEFAULT 
 	  || rip->timeout_time != RIP_TIMEOUT_TIMER_DEFAULT 
 	  || rip->garbage_time != RIP_GARBAGE_TIMER_DEFAULT)
-	vty_out (vty, " timers basic %lu %lu %lu%s",
+	vty_out (vty, " timers basic %lu %lu %lu\n",
 		 rip->update_time,
 		 rip->timeout_time,
-		 rip->garbage_time,
-		 VTY_NEWLINE);
+		 rip->garbage_time);
 
       /* Default information configuration. */
       if (rip->default_information)
 	{
 	  if (rip->default_information_route_map)
-	    vty_out (vty, " default-information originate route-map %s%s",
-		     rip->default_information_route_map, VTY_NEWLINE);
+	    vty_out (vty, " default-information originate route-map %s\n",
+		     rip->default_information_route_map);
 	  else
-	    vty_out (vty, " default-information originate%s",
-		     VTY_NEWLINE);
+	    vty_out (vty," default-information originate\n");
 	}
 
       /* Redistribute configuration. */
@@ -3704,8 +3693,8 @@ config_write_rip (struct vty *vty)
 			
       /* RIP default metric configuration */
       if (rip->default_metric != RIP_DEFAULT_METRIC_DEFAULT)
-        vty_out (vty, " default-metric %d%s",
-		 rip->default_metric, VTY_NEWLINE);
+        vty_out (vty, " default-metric %d\n",
+		 rip->default_metric);
 
       /* Distribute configuration. */
       write += config_write_distribute (vty);
@@ -3715,27 +3704,25 @@ config_write_rip (struct vty *vty)
 
       /* Distance configuration. */
       if (rip->distance)
-	vty_out (vty, " distance %d%s", rip->distance, VTY_NEWLINE);
+	vty_out (vty, " distance %d\n", rip->distance);
 
       /* RIP source IP prefix distance configuration. */
       for (rn = route_top (rip_distance_table); rn; rn = route_next (rn))
 	if ((rdistance = rn->info) != NULL)
-	  vty_out (vty, " distance %d %s/%d %s%s", rdistance->distance,
+	  vty_out (vty, " distance %d %s/%d %s\n", rdistance->distance,
 		   inet_ntoa (rn->p.u.prefix4), rn->p.prefixlen,
-		   rdistance->access_list ? rdistance->access_list : "",
-		   VTY_NEWLINE);
+		   rdistance->access_list ? rdistance->access_list : "");
 
       /* ECMP configuration. */
       if (rip->ecmp)
-        vty_out (vty, " allow-ecmp%s", VTY_NEWLINE);
+        vty_out (vty, " allow-ecmp\n");
 
       /* RIP static route configuration. */
       for (rn = route_top (rip->route); rn; rn = route_next (rn))
 	if (rn->info)
-	  vty_out (vty, " route %s/%d%s", 
+	  vty_out (vty, " route %s/%d\n", 
 		   inet_ntoa (rn->p.u.prefix4),
-		   rn->p.prefixlen,
-		   VTY_NEWLINE);
+		   rn->p.prefixlen);
 
     }
   return write;

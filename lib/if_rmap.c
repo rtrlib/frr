@@ -228,8 +228,8 @@ DEFUN (if_rmap,
     type = IF_RMAP_OUT;
   else
     {
-      vty_out (vty, "route-map direction must be [in|out]%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "route-map direction must be [in|out]\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if_rmap_set (argv[idx_ifname]->arg, type, argv[idx_rmap_name]->arg);
@@ -259,15 +259,15 @@ DEFUN (no_if_rmap,
     type = IF_RMAP_OUT;
   else
     {
-      vty_out (vty, "route-map direction must be [in|out]%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "route-map direction must be [in|out]\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   ret = if_rmap_unset (argv[idx_ifname]->arg, type, argv[idx_routemap_name]->arg);
   if (! ret)
     {
-      vty_out (vty, "route-map doesn't exist%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "route-map doesn't exist\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   return CMD_SUCCESS;
 }
@@ -290,19 +290,17 @@ config_write_if_rmap (struct vty *vty)
 
 	if (if_rmap->routemap[IF_RMAP_IN])
 	  {
-	    vty_out (vty, " route-map %s in %s%s", 
+	    vty_out (vty, " route-map %s in %s\n", 
 		     if_rmap->routemap[IF_RMAP_IN],
-		     if_rmap->ifname,
-		     VTY_NEWLINE);
+		     if_rmap->ifname);
 	    write++;
 	  }
 
 	if (if_rmap->routemap[IF_RMAP_OUT])
 	  {
-	    vty_out (vty, " route-map %s out %s%s", 
+	    vty_out (vty, " route-map %s out %s\n", 
 		     if_rmap->routemap[IF_RMAP_OUT],
-		     if_rmap->ifname,
-		     VTY_NEWLINE);
+		     if_rmap->ifname);
 	    write++;
 	  }
       }
@@ -318,7 +316,7 @@ if_rmap_reset ()
 void
 if_rmap_init (int node)
 {
-  ifrmaphash = hash_create (if_rmap_hash_make, if_rmap_hash_cmp);
+  ifrmaphash = hash_create (if_rmap_hash_make, if_rmap_hash_cmp, NULL);
   if (node == RIPNG_NODE) {
   } else if (node == RIP_NODE) {
     install_element (RIP_NODE, &if_rmap_cmd);

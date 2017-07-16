@@ -41,7 +41,6 @@ show_adj_route_vpn (struct vty *vty, struct peer *peer, struct prefix_rd *prd,
   struct attr *attr;
   int rd_header;
   int header = 1;
-  char v4_header[] = "   Network          Next Hop            Metric LocPrf Weight Path%s";
   json_object *json = NULL;
   json_object *json_scode = NULL;
   json_object *json_ocode = NULL;
@@ -52,7 +51,7 @@ show_adj_route_vpn (struct vty *vty, struct peer *peer, struct prefix_rd *prd,
   if (bgp == NULL)
     {
       if (!use_json)
-        vty_out (vty, "No BGP process is configured%s", VTY_NEWLINE);
+        vty_out (vty, "No BGP process is configured\n");
       return CMD_WARNING;
     }
 
@@ -105,13 +104,12 @@ show_adj_route_vpn (struct vty *vty, struct peer *peer, struct prefix_rd *prd,
                         }
                       else
                         {
-                          vty_out (vty, "BGP table version is 0, local router ID is %s%s",
-                                   inet_ntoa (bgp->router_id), VTY_NEWLINE);
-                          vty_out (vty, "Status codes: s suppressed, d damped, h history, * valid, > best, i - internal%s",
-                                   VTY_NEWLINE);
-                          vty_out (vty, "Origin codes: i - IGP, e - EGP, ? - incomplete%s%s",
-                                   VTY_NEWLINE, VTY_NEWLINE);
-                          vty_out (vty, v4_header, VTY_NEWLINE);
+                          vty_out (vty, "BGP table version is 0, local router ID is %s\n",
+                                   inet_ntoa(bgp->router_id));
+                          vty_out (vty,
+                                     "Status codes: s suppressed, d damped, h history, * valid, > best, i - internal\n");
+                          vty_out (vty, "Origin codes: i - IGP, e - EGP, ? - incomplete\n\n");
+                          vty_out (vty, V4_HEADER);
                         }
                       header = 0;
                     }
@@ -171,7 +169,7 @@ show_adj_route_vpn (struct vty *vty, struct peer *peer, struct prefix_rd *prd,
                                      rd_vnc_eth.macaddr.octet[5]);
 #endif
 
-                          vty_out (vty, "%s", VTY_NEWLINE);
+                          vty_out (vty, "\n");
                         }
                       rd_header = 0;
                     }
@@ -192,7 +190,8 @@ show_adj_route_vpn (struct vty *vty, struct peer *peer, struct prefix_rd *prd,
   if (use_json)
     {
       json_object_object_add(json, "routes", json_routes);
-      vty_out (vty, "%s%s", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY), VTY_NEWLINE);
+      vty_out (vty, "%s\n",
+                 json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
       json_object_free(json);
     }
   return CMD_SUCCESS;

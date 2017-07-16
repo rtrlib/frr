@@ -202,14 +202,12 @@ router_id_write (struct vty *vty)
       if (zvrf->rid_user_assigned.u.prefix4.s_addr)
         {
           if (zvrf_id (zvrf) == VRF_DEFAULT)
-            vty_out (vty, "router-id %s%s",
-                     inet_ntoa (zvrf->rid_user_assigned.u.prefix4),
-                     VTY_NEWLINE);
-          else
-            vty_out (vty, "router-id %s vrf %s%s",
-                     inet_ntoa (zvrf->rid_user_assigned.u.prefix4),
-                     zvrf_name (zvrf),
-                     VTY_NEWLINE);
+            vty_out (vty, "router-id %s\n",
+                     inet_ntoa(zvrf->rid_user_assigned.u.prefix4));
+            else
+              vty_out (vty, "router-id %s vrf %s\n",
+	                     inet_ntoa (zvrf->rid_user_assigned.u.prefix4),
+	                     zvrf_name(zvrf));
         }
 }
 
@@ -228,7 +226,7 @@ DEFUN (router_id,
 
   rid.u.prefix4.s_addr = inet_addr (argv[idx_ipv4]->arg);
   if (!rid.u.prefix4.s_addr)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   rid.prefixlen = 32;
   rid.family = AF_INET;

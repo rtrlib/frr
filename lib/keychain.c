@@ -271,8 +271,8 @@ DEFUN (no_key_chain,
 
   if (! keychain)
     {
-      vty_out (vty, "Can't find keychain %s%s", argv[idx_word]->arg, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find keychain %s\n", argv[idx_word]->arg);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   keychain_delete (keychain);
@@ -291,7 +291,7 @@ DEFUN_NOSH (key,
   struct key *key;
   u_int32_t index;
 
-  VTY_GET_INTEGER ("key identifier", index, argv[idx_number]->arg);
+  index = strtoul (argv[idx_number]->arg, NULL, 10);
   key = key_get (keychain, index);
   VTY_PUSH_CONTEXT_SUB (KEYCHAIN_KEY_NODE, key);
   
@@ -310,12 +310,12 @@ DEFUN (no_key,
   struct key *key;
   u_int32_t index;
   
-  VTY_GET_INTEGER ("key identifier", index, argv[idx_number]->arg);
+  index = strtoul(argv[idx_number]->arg, NULL, 10);
   key = key_lookup (keychain, index);
   if (! key)
     {
-      vty_out (vty, "Can't find key %d%s", index, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find key %d\n", index);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   key_delete (keychain, key);
@@ -477,21 +477,21 @@ key_lifetime_set (struct vty *vty, struct key_range *krange,
   time_start = key_str2time (stime_str, sday_str, smonth_str, syear_str);
   if (time_start < 0)
     {
-      vty_out (vty, "Malformed time value%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed time value\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   time_end = key_str2time (etime_str, eday_str, emonth_str, eyear_str);
 
   if (time_end < 0)
     {
-      vty_out (vty, "Malformed time value%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed time value\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (time_end <= time_start)
     {
-      vty_out (vty, "Expire time is not later than start time%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Expire time is not later than start time\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   krange->start = time_start;
@@ -512,12 +512,12 @@ key_lifetime_duration_set (struct vty *vty, struct key_range *krange,
   time_start = key_str2time (stime_str, sday_str, smonth_str, syear_str);
   if (time_start < 0)
     {
-      vty_out (vty, "Malformed time value%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed time value\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   krange->start = time_start;
 
-  VTY_GET_INTEGER ("duration", duration, duration_str);
+  duration = strtoul(duration_str, NULL, 10);
   krange->duration = 1;
   krange->end = time_start + duration;
 
@@ -534,8 +534,8 @@ key_lifetime_infinite_set (struct vty *vty, struct key_range *krange,
   time_start = key_str2time (stime_str, sday_str, smonth_str, syear_str);
   if (time_start < 0)
     {
-      vty_out (vty, "Malformed time value%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed time value\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   krange->start = time_start;
 
@@ -966,14 +966,14 @@ keychain_config_write (struct vty *vty)
 
   for (ALL_LIST_ELEMENTS_RO (keychain_list, node, keychain))
     {
-      vty_out (vty, "key chain %s%s", keychain->name, VTY_NEWLINE);
+      vty_out (vty, "key chain %s\n", keychain->name);
       
       for (ALL_LIST_ELEMENTS_RO (keychain->key, knode, key))
 	{
-	  vty_out (vty, " key %d%s", key->index, VTY_NEWLINE);
+	  vty_out (vty, " key %d\n", key->index);
 
 	  if (key->string)
-	    vty_out (vty, "  key-string %s%s", key->string, VTY_NEWLINE);
+	    vty_out (vty, "  key-string %s\n", key->string);
 
 	  if (key->accept.start)
 	    {
@@ -990,7 +990,7 @@ keychain_config_write (struct vty *vty)
 		  keychain_strftime (buf, BUFSIZ, &key->accept.end);
 		  vty_out (vty, " %s", buf);
 		}
-	      vty_out (vty, "%s", VTY_NEWLINE);
+	      vty_out (vty, "\n");
 	    }
 
 	  if (key->send.start)
@@ -1007,10 +1007,10 @@ keychain_config_write (struct vty *vty)
 		  keychain_strftime (buf, BUFSIZ, &key->send.end);
 		  vty_out (vty, " %s", buf);
 		}
-	      vty_out (vty, "%s", VTY_NEWLINE);
+	      vty_out (vty, "\n");
 	    }
 	}
-      vty_out (vty, "!%s", VTY_NEWLINE);
+      vty_out (vty, "!\n");
     }
 
   return 0;

@@ -126,6 +126,8 @@ typedef unsigned char   u_int8_t;
 #define __APPLE_USE_RFC_3542
 #endif
 
+#include "openbsd-tree.h"
+
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
@@ -245,6 +247,12 @@ size_t strlcpy (char *__restrict dest, const char *__restrict src, size_t size);
 #endif /* HAVE_BROKEN_CMSG_FIRSTHDR */
 
 
+/* GCC have printf type attribute check.  */
+#ifdef __GNUC__
+#define PRINTF_ATTRIBUTE(a,b) __attribute__ ((__format__ (__printf__, a, b)))
+#else
+#define PRINTF_ATTRIBUTE(a,b)
+#endif /* __GNUC__ */
 
 /* 
  * RFC 3542 defines several macros for using struct cmsghdr.

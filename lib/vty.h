@@ -156,7 +156,7 @@ static inline void vty_push_context(struct vty *vty,
 #define VTY_CHECK_CONTEXT(ptr) \
 	if (!ptr) { \
 		vty_out (vty, "Current configuration object was deleted " \
-				"by another process.%s", VTY_NEWLINE); \
+				"by another process.\n"); \
 		return CMD_WARNING; \
 	}
 
@@ -179,8 +179,43 @@ struct vty_arg
 /* Integrated configuration file. */
 #define INTEGRATE_DEFAULT_CONFIG "frr.conf"
 
-/* Small macro to determine newline is newline only or linefeed needed. */
-#define VTY_NEWLINE  ((vty->type == VTY_TERM) ? "\r\n" : "\n")
+/* for compatibility */
+#if defined(__ICC)
+#define CPP_WARN_STR(X) #X
+#define CPP_WARN(text) _Pragma(CPP_WARN_STR(message __FILE__ ": " text))
+
+#elif (defined(__GNUC__) && \
+	(__GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))) || \
+    (defined(__clang__) && \
+	(__clang_major__ >= 4 || (__clang_major__ == 3 && __clang_minor__ >= 5)))
+#define CPP_WARN_STR(X) #X
+#define CPP_WARN(text) _Pragma(CPP_WARN_STR(GCC warning text))
+
+#else
+#define CPP_WARN(text)
+#endif
+
+#define VNL                                       "\n" \
+	CPP_WARN("VNL has been replaced with \\n.")
+#define VTYNL                                     "\n" \
+	CPP_WARN("VTYNL has been replaced with \\n.")
+#define VTY_NEWLINE                               "\n" \
+	CPP_WARN("VTY_NEWLINE has been replaced with \\n.")
+#define VTY_GET_INTEGER(desc,v,str)               {(v)=strtoul ((str), NULL, 10);} \
+	CPP_WARN("VTY_GET_INTEGER is no longer useful, use strtoul() or DEFPY.")
+#define VTY_GET_INTEGER_RANGE(desc,v,str,min,max) {(v)=strtoul ((str), NULL, 10);} \
+	CPP_WARN("VTY_GET_INTEGER_RANGE is no longer useful, use strtoul() or DEFPY.")
+#define VTY_GET_ULONG(desc,v,str)                 {(v)=strtoul ((str), NULL, 10);} \
+	CPP_WARN("VTY_GET_ULONG is no longer useful, use strtoul() or DEFPY.")
+#define VTY_GET_ULL(desc,v,str)                   {(v)=strtoull ((str), NULL, 10);} \
+	CPP_WARN("VTY_GET_ULL is no longer useful, use strtoull() or DEFPY.")
+#define VTY_GET_IPV4_ADDRESS(desc,v,str)          inet_aton ((str), &(v)) \
+	CPP_WARN("VTY_GET_IPV4_ADDRESS is no longer useful, use inet_aton() or DEFPY.")
+#define VTY_GET_IPV4_PREFIX(desc,v,str)           str2prefix_ipv4 ((str), &(v)) \
+	CPP_WARN("VTY_GET_IPV4_PREFIX is no longer useful, use str2prefix_ipv4() or DEFPY.")
+#define vty_outln(vty, str, ...) \
+	vty_out(vty, str "\n", ## __VA_ARGS__) \
+	CPP_WARN("vty_outln is no longer useful, use vty_out(...\\n...)")
 
 /* Default time out value */
 #define VTY_TIMEOUT_DEFAULT 600
@@ -196,122 +231,6 @@ struct vty_arg
 #ifndef IS_DIRECTORY_SEP
 #define IS_DIRECTORY_SEP(c) ((c) == DIRECTORY_SEP)
 #endif
-
-/* GCC have printf type attribute check.  */
-#ifdef __GNUC__
-#define PRINTF_ATTRIBUTE(a,b) __attribute__ ((__format__ (__printf__, a, b)))
-#else
-#define PRINTF_ATTRIBUTE(a,b)
-#endif /* __GNUC__ */
-
-/* Utility macros to convert VTY argument to unsigned long */
-#define VTY_GET_ULONG(NAME,V,STR) \
-do { \
-  char *endptr = NULL; \
-  errno = 0; \
-  (V) = strtoul ((STR), &endptr, 10); \
-  if (*(STR) == '-') \
-    { \
-      vty_out (vty, "%% Invalid %s value (dash)%s", NAME, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-  if (*endptr != '\0') \
-    { \
-      vty_out (vty, "%% Invalid %s value (%s)%s", NAME, endptr, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-  if (errno) \
-    { \
-      vty_out (vty, "%% Invalid %s value (error %d)%s", NAME, errno, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-} while (0)
-
-/* Utility macros to convert VTY argument to unsigned long long */
-#define VTY_GET_ULL(NAME,V,STR) \
-do { \
-  char *endptr = NULL; \
-  errno = 0; \
-  (V) = strtoull ((STR), &endptr, 10); \
-  if (*(STR) == '-') \
-    { \
-      vty_out (vty, "%% Invalid %s value (dash)%s", NAME, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-  if (*endptr != '\0') \
-    { \
-      vty_out (vty, "%% Invalid %s value (%s)%s", NAME, endptr, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-  if (errno) \
-    { \
-      vty_out (vty, "%% Invalid %s value (error %d)%s", NAME, errno, VTY_NEWLINE); \
-      return CMD_WARNING; \
-    } \
-} while (0)
-
-/*
- * The logic below ((TMPL) <= ((MIN) && (TMPL) != (MIN)) is
- * done to circumvent the compiler complaining about
- * comparing unsigned numbers against zero, if MIN is zero.
- * NB: The compiler isn't smart enough to supress the warning
- * if you write (MIN) != 0 && tmpl < (MIN).
- */
-#define VTY_GET_INTEGER_RANGE_HEART(NAME,TMPL,STR,MIN,MAX)      \
-do {                                                            \
-  VTY_GET_ULONG(NAME, (TMPL), STR);                             \
-  if ( ((TMPL) <= (MIN) && (TMPL) != (MIN)) || (TMPL) > (MAX) ) \
-    {                                                           \
-      vty_out (vty, "%% Invalid %s value%s", NAME, VTY_NEWLINE);\
-      return CMD_WARNING;                                       \
-    }                                                           \
-} while (0)
-
-#define VTY_GET_INTEGER_RANGE(NAME,V,STR,MIN,MAX)               \
-do {                                                            \
-  unsigned long long tmpl;                                      \
-  VTY_GET_INTEGER_RANGE_HEART(NAME,tmpl,STR,MIN,MAX);           \
-  (V) = tmpl;                                                   \
-} while (0)
-
-#define VTY_CHECK_INTEGER_RANGE(NAME,STR,MIN,MAX)               \
-do {                                                            \
-  unsigned long tmpl;                                           \
-  VTY_GET_INTEGER_RANGE_HEART(NAME,tmpl,STR,MIN,MAX);           \
-} while (0)
-
-#define VTY_GET_INTEGER(NAME,V,STR)                             \
-    VTY_GET_INTEGER_RANGE(NAME,V,STR,0U,UINT32_MAX)
-
-#define VTY_GET_IPV4_ADDRESS(NAME,V,STR)                                      \
-do {                                                                             \
-  int retv;                                                                   \
-  retv = inet_aton ((STR), &(V));                                             \
-  if (!retv)                                                                  \
-    {                                                                         \
-      vty_out (vty, "%% Invalid %s value%s", NAME, VTY_NEWLINE);              \
-      return CMD_WARNING;                                                     \
-    }                                                                         \
-} while (0)
-
-#define VTY_GET_IPV4_PREFIX(NAME,V,STR)                                       \
-do {                                                                             \
-  int retv;                                                                   \
-  retv = str2prefix_ipv4 ((STR), &(V));                                       \
-  if (retv <= 0)                                                              \
-    {                                                                         \
-      vty_out (vty, "%% Invalid %s value%s", NAME, VTY_NEWLINE);              \
-      return CMD_WARNING;                                                     \
-    }                                                                         \
-} while (0)
-
-#define VTY_WARN_EXPERIMENTAL()                                               \
-do {                                                                          \
-  vty_out (vty, "%% WARNING: this command is experimental. Both its name and" \
-                " parameters may%s%% change in a future version of Quagga,"   \
-                " possibly breaking your configuration!%s",                   \
-                VTY_NEWLINE, VTY_NEWLINE);                                    \
-} while (0)
 
 /* Exported variables */
 extern char integrate_default[];
@@ -341,8 +260,5 @@ extern void vty_hello (struct vty *);
 /* Send a fixed-size message to all vty terminal monitors; this should be
    an async-signal-safe function. */
 extern void vty_log_fixed (char *buf, size_t len);
-
-extern const char *vty_get_arg_value (struct vty_arg **, const char *);
-extern struct vty_arg *vty_get_arg (struct vty_arg **, const char *);
 
 #endif /* _ZEBRA_VTY_H */

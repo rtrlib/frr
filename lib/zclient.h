@@ -96,6 +96,15 @@ typedef enum {
   ZEBRA_FEC_REGISTER,
   ZEBRA_FEC_UNREGISTER,
   ZEBRA_FEC_UPDATE,
+  ZEBRA_ADVERTISE_ALL_VNI,
+  ZEBRA_VNI_ADD,
+  ZEBRA_VNI_DEL,
+  ZEBRA_REMOTE_VTEP_ADD,
+  ZEBRA_REMOTE_VTEP_DEL,
+  ZEBRA_MACIP_ADD,
+  ZEBRA_MACIP_DEL,
+  ZEBRA_REMOTE_MACIP_ADD,
+  ZEBRA_REMOTE_MACIP_DEL,
 } zebra_message_types_t;
 
 struct redist_proto
@@ -167,6 +176,10 @@ struct zclient
   int (*redistribute_route_ipv6_add) (int, struct zclient *, uint16_t, vrf_id_t);
   int (*redistribute_route_ipv6_del) (int, struct zclient *, uint16_t, vrf_id_t);
   int (*fec_update) (int, struct zclient *, uint16_t);
+  int (*local_vni_add) (int, struct zclient *, uint16_t, vrf_id_t);
+  int (*local_vni_del) (int, struct zclient *, uint16_t, vrf_id_t);
+  int (*local_macip_add) (int, struct zclient *, uint16_t, vrf_id_t);
+  int (*local_macip_del) (int, struct zclient *, uint16_t, vrf_id_t);
 };
 
 /* Zebra API message flag. */
@@ -190,6 +203,31 @@ struct zserv_header
 #define ZSERV_VERSION	4
   vrf_id_t vrf_id;
   uint16_t command;
+};
+
+struct zapi_route
+{
+  u_char type;
+  u_short instance;
+
+  u_int32_t flags;
+
+  u_char message;
+
+  safi_t safi;
+
+  u_char nexthop_num;
+  struct nexthop **nexthop;
+
+  u_char distance;
+
+  u_int32_t metric;
+
+  route_tag_t tag;
+
+  u_int32_t mtu;
+
+  vrf_id_t vrf_id;
 };
 
 /* Zebra IPv4 route message API. */
@@ -323,5 +361,8 @@ extern int zapi_ipv6_route (u_char cmd, struct zclient *zclient,
                      struct zapi_ipv6 *api);
 extern int zapi_ipv4_route_ipv6_nexthop (u_char, struct zclient *,
                                          struct prefix_ipv4 *, struct zapi_ipv6 *);
+extern int zapi_route (u_char cmd, struct zclient *zclient,
+                       struct prefix *p, struct prefix_ipv6 *src_p,
+                       struct zapi_route *api);
 
 #endif /* _ZEBRA_ZCLIENT_H */

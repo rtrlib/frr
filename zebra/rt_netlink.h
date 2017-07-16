@@ -33,6 +33,12 @@
 #define RTPROT_OSPF        188
 #define RTPROT_RIP         189
 #define RTPROT_RIPNG       190
+#if !defined(RTPROT_BABEL)
+#define RTPROT_BABEL              42
+#endif
+#define RTPROT_NHRP        191
+#define RTPROT_EIGRP       192
+#define RTPROT_LDP         193
 
 void rt_netlink_init (void);
 
@@ -44,6 +50,15 @@ netlink_mpls_multipath (int cmd, zebra_lsp_t *lsp);
 extern int netlink_route_change (struct sockaddr_nl *snl, struct nlmsghdr *h,
                                  ns_id_t ns_id, int startup);
 extern int netlink_route_read (struct zebra_ns *zns);
+
+extern int netlink_neigh_change (struct sockaddr_nl *snl, struct nlmsghdr *h,
+                                 ns_id_t ns_id);
+extern int netlink_macfdb_read (struct zebra_ns *zns);
+extern int netlink_macfdb_read_for_bridge (struct zebra_ns *zns,
+                              struct interface *ifp, struct interface *br_if);
+extern int netlink_neigh_read (struct zebra_ns *zns);
+extern int netlink_neigh_read_for_vlan (struct zebra_ns *zns,
+                                        struct interface *vlan_if);
 
 #endif /* HAVE_NETLINK */
 

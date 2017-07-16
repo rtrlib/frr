@@ -457,9 +457,9 @@ DEFUN (ip_as_path,
   regex = bgp_regcomp (regstr);
   if (!regex)
     {
-      vty_out (vty, "can't compile regexp %s%s", regstr, VTY_NEWLINE);
+      vty_out (vty, "can't compile regexp %s\n", regstr);
       XFREE (MTYPE_TMP, regstr);
-      return CMD_WARNING;
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   asfilter = as_filter_make (regex, regstr, type);
@@ -503,9 +503,8 @@ DEFUN (no_ip_as_path,
   aslist = as_list_lookup (aslistname);
   if (aslist == NULL)
     {
-      vty_out (vty, "ip as-path access-list %s doesn't exist%s", aslistname,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "ip as-path access-list %s doesn't exist\n",aslistname);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Check the filter type. */
@@ -515,8 +514,8 @@ DEFUN (no_ip_as_path,
     type = AS_FILTER_DENY;
   else
     {
-      vty_out (vty, "filter type must be [permit|deny]%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "filter type must be [permit|deny]\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   
   /* Compile AS path. */
@@ -526,9 +525,9 @@ DEFUN (no_ip_as_path,
   regex = bgp_regcomp (regstr);
   if (!regex)
     {
-      vty_out (vty, "can't compile regexp %s%s", regstr, VTY_NEWLINE);
+      vty_out (vty, "can't compile regexp %s\n", regstr);
       XFREE (MTYPE_TMP, regstr);
-      return CMD_WARNING;
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   /* Lookup asfilter. */
@@ -539,8 +538,8 @@ DEFUN (no_ip_as_path,
 
   if (asfilter == NULL)
     {
-      vty_out (vty, "%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   as_list_filter_delete (aslist, asfilter);
@@ -563,9 +562,9 @@ DEFUN (no_ip_as_path_all,
   aslist = as_list_lookup (argv[idx_word]->arg);
   if (aslist == NULL)
     {
-      vty_out (vty, "ip as-path access-list %s doesn't exist%s", argv[idx_word]->arg,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "ip as-path access-list %s doesn't exist\n",
+                 argv[idx_word]->arg);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   as_list_delete (aslist);
@@ -582,12 +581,12 @@ as_list_show (struct vty *vty, struct as_list *aslist)
 {
   struct as_filter *asfilter;
 
-  vty_out (vty, "AS path access list %s%s", aslist->name, VTY_NEWLINE);
+  vty_out (vty, "AS path access list %s\n", aslist->name);
 
   for (asfilter = aslist->head; asfilter; asfilter = asfilter->next)
     {
-      vty_out (vty, "    %s %s%s", filter_type_str (asfilter->type),
-	       asfilter->reg_str, VTY_NEWLINE);
+      vty_out (vty, "    %s %s\n", filter_type_str (asfilter->type),
+	       asfilter->reg_str);
     }
 }
 
@@ -599,23 +598,23 @@ as_list_show_all (struct vty *vty)
 
   for (aslist = as_list_master.num.head; aslist; aslist = aslist->next)
     {
-      vty_out (vty, "AS path access list %s%s", aslist->name, VTY_NEWLINE);
+      vty_out (vty, "AS path access list %s\n", aslist->name);
 
       for (asfilter = aslist->head; asfilter; asfilter = asfilter->next)
 	{
-	  vty_out (vty, "    %s %s%s", filter_type_str (asfilter->type),
-		   asfilter->reg_str, VTY_NEWLINE);
+	  vty_out (vty, "    %s %s\n", filter_type_str (asfilter->type),
+		   asfilter->reg_str);
 	}
     }
 
   for (aslist = as_list_master.str.head; aslist; aslist = aslist->next)
     {
-      vty_out (vty, "AS path access list %s%s", aslist->name, VTY_NEWLINE);
+      vty_out (vty, "AS path access list %s\n", aslist->name);
 
       for (asfilter = aslist->head; asfilter; asfilter = asfilter->next)
 	{
-	  vty_out (vty, "    %s %s%s", filter_type_str (asfilter->type),
-		   asfilter->reg_str, VTY_NEWLINE);
+	  vty_out (vty, "    %s %s\n", filter_type_str (asfilter->type),
+		   asfilter->reg_str);
 	}
     }
 }
@@ -659,20 +658,18 @@ config_write_as_list (struct vty *vty)
   for (aslist = as_list_master.num.head; aslist; aslist = aslist->next)
     for (asfilter = aslist->head; asfilter; asfilter = asfilter->next)
       {
-	vty_out (vty, "ip as-path access-list %s %s %s%s",
+	vty_out (vty, "ip as-path access-list %s %s %s\n",
 		 aslist->name, filter_type_str (asfilter->type), 
-		 asfilter->reg_str,
-		 VTY_NEWLINE);
+		 asfilter->reg_str);
 	write++;
       }
 
   for (aslist = as_list_master.str.head; aslist; aslist = aslist->next)
     for (asfilter = aslist->head; asfilter; asfilter = asfilter->next)
       {
-	vty_out (vty, "ip as-path access-list %s %s %s%s",
+	vty_out (vty, "ip as-path access-list %s %s %s\n",
 		 aslist->name, filter_type_str (asfilter->type), 
-		 asfilter->reg_str,
-		 VTY_NEWLINE);
+		 asfilter->reg_str);
 	write++;
       }
   return write;

@@ -48,7 +48,12 @@ zebra_test_ipv4 (int command, int type, char *prefix, char *gateway,
   struct in_addr *gpnt;
 
   str2prefix_ipv4 (prefix, &p);
-  inet_aton (gateway, &gate);
+  if (!inet_aton (gateway, &gate))
+    {
+      printf("Gateway specified: %s is illegal\n", gateway);
+      return;
+    }
+
   gpnt = &gate;
 
   api.vrf_id = VRF_DEFAULT;
@@ -195,7 +200,7 @@ main (int argc, char **argv)
   if (argc == 1)
       usage_exit ();
 
-  master = thread_master_create();
+  master = thread_master_create(NULL);
   /* Establish connection to zebra. */
   zclient = zclient_new(master);
   zclient->enable = 1;

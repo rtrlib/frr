@@ -44,6 +44,8 @@
  * struct parser_ctx is needed for the bison forward decls.
  */
 %code requires {
+  #include "config.h"
+
   #include <stdlib.h>
   #include <string.h>
   #include <ctype.h>
@@ -189,7 +191,7 @@ start:
 
 varname_token: '$' WORD
 {
-  $$ = XSTRDUP (MTYPE_LEX, $2);
+  $$ = $2;
 }
 | /* empty */
 {
@@ -440,6 +442,14 @@ terminate_graph (CMD_YYLTYPE *locp, struct parser_ctx *ctx,
     new_token_node (ctx, END_TKN, CMD_CR_TEXT, "");
   struct graph_node *end_element_node =
     graph_new_node (ctx->graph, element, NULL);
+
+  if (ctx->docstr && strlen (ctx->docstr) > 1) {
+    zlog_debug ("Excessive docstring while parsing '%s'", ctx->el->string);
+    zlog_debug ("----------");
+    while (ctx->docstr && ctx->docstr[1] != '\0')
+      zlog_debug ("%s", strsep(&ctx->docstr, "\n"));
+    zlog_debug ("----------\n");
+  }
 
   graph_add_edge (finalnode, end_token_node);
   graph_add_edge (end_token_node, end_element_node);

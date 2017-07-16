@@ -35,31 +35,28 @@ DEFUN (show_debugging_ripng,
        DEBUG_STR
        "RIPng configuration\n")
 {
-  vty_out (vty, "RIPng debugging status:%s", VTY_NEWLINE);
+  vty_out (vty, "RIPng debugging status:\n");
 
   if (IS_RIPNG_DEBUG_EVENT)
-    vty_out (vty, "  RIPng event debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  RIPng event debugging is on\n");
 
   if (IS_RIPNG_DEBUG_PACKET)
     {
       if (IS_RIPNG_DEBUG_SEND && IS_RIPNG_DEBUG_RECV)
 	{
-	  vty_out (vty, "  RIPng packet debugging is on%s",
-		   VTY_NEWLINE);
+	  vty_out (vty,"  RIPng packet debugging is on\n");
 	}
       else
 	{
 	  if (IS_RIPNG_DEBUG_SEND)
-	    vty_out (vty, "  RIPng packet send debugging is on%s",
-		     VTY_NEWLINE);
+	    vty_out (vty,"  RIPng packet send debugging is on\n");
 	  else
-	    vty_out (vty, "  RIPng packet receive debugging is on%s",
-		     VTY_NEWLINE);
+	    vty_out (vty,"  RIPng packet receive debugging is on\n");
 	}
     }
 
   if (IS_RIPNG_DEBUG_ZEBRA)
-    vty_out (vty, "  RIPng zebra debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  RIPng zebra debugging is on\n");
 
   return CMD_SUCCESS;
 }
@@ -72,7 +69,7 @@ DEFUN (debug_ripng_events,
        "Debug option set for ripng events\n")
 {
   ripng_debug_event = RIPNG_DEBUG_EVENT;
-  return CMD_WARNING;
+  return CMD_WARNING_CONFIG_FAILED;
 }
 
 DEFUN (debug_ripng_packet,
@@ -115,7 +112,7 @@ DEFUN (debug_ripng_zebra,
        "Debug option set for ripng and zebra communication\n")
 {
   ripng_debug_zebra = RIPNG_DEBUG_ZEBRA;
-  return CMD_WARNING;
+  return CMD_WARNING_CONFIG_FAILED;
 }
 
 DEFUN (no_debug_ripng_events,
@@ -179,7 +176,7 @@ DEFUN (no_debug_ripng_zebra,
        "Debug option set for ripng and zebra communication\n")
 {
   ripng_debug_zebra = 0;
-  return CMD_WARNING;
+  return CMD_WARNING_CONFIG_FAILED;
 }
 
 /* Debug node. */
@@ -197,31 +194,28 @@ config_write_debug (struct vty *vty)
 
   if (IS_RIPNG_DEBUG_EVENT)
     {
-      vty_out (vty, "debug ripng events%s", VTY_NEWLINE);
+      vty_out (vty, "debug ripng events\n");
       write++;
     }
   if (IS_RIPNG_DEBUG_PACKET)
     {
       if (IS_RIPNG_DEBUG_SEND && IS_RIPNG_DEBUG_RECV)
 	{
-	  vty_out (vty, "debug ripng packet%s",
-		   VTY_NEWLINE);
+	  vty_out (vty,"debug ripng packet\n");
 	  write++;
 	}
       else
 	{
 	  if (IS_RIPNG_DEBUG_SEND)
-	    vty_out (vty, "debug ripng packet send%s",
-		     VTY_NEWLINE);
+	    vty_out (vty,"debug ripng packet send\n");
 	  else
-	    vty_out (vty, "debug ripng packet recv%s",
-		     VTY_NEWLINE);
+	    vty_out (vty,"debug ripng packet recv\n");
 	  write++;
 	}
     }
   if (IS_RIPNG_DEBUG_ZEBRA)
     {
-      vty_out (vty, "debug ripng zebra%s", VTY_NEWLINE);
+      vty_out (vty, "debug ripng zebra\n");
       write++;
     }
   return write;

@@ -126,8 +126,8 @@ work_queue_schedule (struct work_queue *wq, unsigned int delay)
        && (listcount (wq->items) > 0) )
     {
       wq->thread = NULL;
-      thread_add_background(wq->master, work_queue_run, wq, delay,
-                            &wq->thread);
+      thread_add_timer_msec (wq->master, work_queue_run, wq, delay,
+                             &wq->thread);
       /* set thread yield time, if needed */
       if (wq->thread && wq->spec.yield != THREAD_YIELD_TIME_SLOT)
         thread_set_yield_time (wq->thread, wq->spec.yield);
@@ -192,22 +192,20 @@ DEFUN (show_work_queues,
   struct work_queue *wq;
   
   vty_out (vty, 
-           "%c %8s %5s %8s %8s %21s%s",
-           ' ', "List","(ms) ","Q. Runs","Yields","Cycle Counts   ",
-           VTY_NEWLINE);
+           "%c %8s %5s %8s %8s %21s\n",
+           ' ', "List","(ms) ","Q. Runs","Yields","Cycle Counts   ");
   vty_out (vty,
-           "%c %8s %5s %8s %8s %7s %6s %8s %6s %s%s",
+           "%c %8s %5s %8s %8s %7s %6s %8s %6s %s\n",
            'P',
            "Items",
            "Hold",
            "Total","Total",
            "Best","Gran.","Total","Avg.",
-           "Name", 
-           VTY_NEWLINE);
+           "Name");
  
   for (ALL_LIST_ELEMENTS_RO (work_queues, node, wq))
     {
-      vty_out (vty,"%c %8d %5d %8ld %8ld %7d %6d %8ld %6u %s%s",
+      vty_out (vty,"%c %8d %5d %8ld %8ld %7d %6d %8ld %6u %s\n",
                (CHECK_FLAG (wq->flags, WQ_UNPLUGGED) ? ' ' : 'P'),
                listcount (wq->items),
                wq->spec.hold,
@@ -215,8 +213,7 @@ DEFUN (show_work_queues,
                wq->cycles.best, wq->cycles.granularity, wq->cycles.total,
                  (wq->runs) ? 
                    (unsigned int) (wq->cycles.total / wq->runs) : 0,
-               wq->name,
-               VTY_NEWLINE);
+               wq->name);
     }
     
   return CMD_SUCCESS;

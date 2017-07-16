@@ -343,30 +343,29 @@ void irdp_config_write (struct vty *vty, struct interface *ifp)
   if(irdp->flags & IF_ACTIVE || irdp->flags & IF_SHUTDOWN) {
 
     if( irdp->flags & IF_SHUTDOWN)
-      vty_out (vty, " ip irdp shutdown %s",  VTY_NEWLINE);
+      vty_out (vty, " ip irdp shutdown \n");
 
     if( irdp->flags & IF_BROADCAST)
-      vty_out (vty, " ip irdp broadcast%s",  VTY_NEWLINE);
+      vty_out (vty, " ip irdp broadcast\n");
     else
-      vty_out (vty, " ip irdp multicast%s",  VTY_NEWLINE);
+      vty_out (vty, " ip irdp multicast\n");
 
-    vty_out (vty, " ip irdp preference %ld%s",
-	     irdp->Preference, VTY_NEWLINE);
+    vty_out (vty, " ip irdp preference %ld\n",
+	     irdp->Preference);
 
     for (ALL_LIST_ELEMENTS_RO (irdp->AdvPrefList, node, adv))
-      vty_out (vty, " ip irdp address %s preference %d%s",
+      vty_out (vty, " ip irdp address %s preference %d\n",
                     inet_2a(adv->ip.s_addr, b1),
-                    adv->pref,
-                    VTY_NEWLINE);
+                    adv->pref);
 
-    vty_out (vty, " ip irdp holdtime %d%s",
-	     irdp->Lifetime, VTY_NEWLINE);
+    vty_out (vty, " ip irdp holdtime %d\n",
+	     irdp->Lifetime);
 
-    vty_out (vty, " ip irdp minadvertinterval %ld%s",
-	     irdp->MinAdvertInterval, VTY_NEWLINE);
+    vty_out (vty, " ip irdp minadvertinterval %ld\n",
+	     irdp->MinAdvertInterval);
 
-    vty_out (vty, " ip irdp maxadvertinterval %ld%s",
-	     irdp->MaxAdvertInterval, VTY_NEWLINE);
+    vty_out (vty, " ip irdp maxadvertinterval %ld\n",
+	     irdp->MaxAdvertInterval);
 
   }
 }
@@ -474,18 +473,15 @@ DEFUN (ip_irdp_minadvertinterval,
   zi=ifp->info;
   irdp=&zi->irdp;
 
-  if( (unsigned) atoi(argv[idx_number]->arg) <= irdp->MaxAdvertInterval) {
+  if((unsigned) atoi(argv[idx_number]->arg) <= irdp->MaxAdvertInterval) {
       irdp->MinAdvertInterval = atoi(argv[idx_number]->arg);
-
       return CMD_SUCCESS;
   }
-
-  vty_out (vty, "ICMP warning maxadvertinterval is greater or equal than minadvertinterval%s",
-	     VTY_NEWLINE);
-
-  vty_out (vty, "Please correct!%s",
-	     VTY_NEWLINE);
-  return CMD_WARNING;
+  else {
+      vty_out (vty, "%% MinAdvertInterval must be less than or equal to "
+                      "MaxAdvertInterval\n");
+      return CMD_WARNING_CONFIG_FAILED;
+  }
 }
 
 DEFUN (ip_irdp_maxadvertinterval,
@@ -504,19 +500,15 @@ DEFUN (ip_irdp_maxadvertinterval,
   zi=ifp->info;
   irdp=&zi->irdp;
 
-
-  if( irdp->MinAdvertInterval <= (unsigned) atoi(argv[idx_number]->arg) ) {
-    irdp->MaxAdvertInterval = atoi(argv[idx_number]->arg);
-
+  if(irdp->MinAdvertInterval <= (unsigned) atoi(argv[idx_number]->arg)) {
+      irdp->MaxAdvertInterval = atoi(argv[idx_number]->arg);
       return CMD_SUCCESS;
   }
-
-  vty_out (vty, "ICMP warning maxadvertinterval is greater or equal than minadvertinterval%s",
-	     VTY_NEWLINE);
-
-  vty_out (vty, "Please correct!%s",
-	     VTY_NEWLINE);
-  return CMD_WARNING;
+  else {
+      vty_out (vty, "%% MaxAdvertInterval must be greater than or equal to "
+                      "MinAdvertInterval\n");
+      return CMD_WARNING_CONFIG_FAILED;
+  }
 }
 
 /* DEFUN needs to be fixed for negative ranages...
@@ -569,7 +561,7 @@ DEFUN (ip_irdp_address_preference,
   irdp=&zi->irdp;
 
   ret = inet_aton(argv[idx_ipv4]->arg, &ip);
-  if(!ret) return CMD_WARNING;
+  if(!ret) return CMD_WARNING_CONFIG_FAILED;
 
   pref = atoi(argv[idx_number]->arg);
 
@@ -611,7 +603,7 @@ DEFUN (no_ip_irdp_address_preference,
 
   ret = inet_aton(argv[idx_ipv4]->arg, &ip);
   if (!ret)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   for (ALL_LIST_ELEMENTS (irdp->AdvPrefList, node, nnode, adv))
     {

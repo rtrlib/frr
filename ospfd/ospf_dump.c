@@ -153,8 +153,8 @@ ospf_nbr_state_message (struct ospf_neighbor *nbr, char *buf, size_t size)
   memset (buf, 0, size);
 
   snprintf (buf, size, "%s/%s",
-	    LOOKUP (ospf_nsm_state_msg, nbr->state),
-	    LOOKUP (ospf_ism_state_msg, state));
+	    lookup_msg(ospf_nsm_state_msg, nbr->state, NULL),
+	    lookup_msg(ospf_ism_state_msg, state, NULL));
 }
 
 const char *
@@ -559,12 +559,12 @@ ospf_header_dump (struct ospf_header *ospfh)
   zlog_debug ("Header");
   zlog_debug ("  Version %d", ospfh->version);
   zlog_debug ("  Type %d (%s)", ospfh->type,
-	     LOOKUP (ospf_packet_type_str, ospfh->type));
+	     lookup_msg(ospf_packet_type_str, ospfh->type, NULL));
   zlog_debug ("  Packet Len %d", ntohs (ospfh->length));
   zlog_debug ("  Router ID %s", inet_ntoa (ospfh->router_id));
   zlog_debug ("  Area ID %s", inet_ntoa (ospfh->area_id));
   zlog_debug ("  Checksum 0x%x", ntohs (ospfh->checksum));
-  zlog_debug ("  AuType %s", LOOKUP (ospf_auth_type_str, auth_type));
+  zlog_debug ("  AuType %s", lookup_msg(ospf_auth_type_str, auth_type, NULL));
 
   switch (auth_type)
     {
@@ -963,7 +963,7 @@ DEFUN (debug_ospf_instance_nsm,
   int idx_number = 2;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1038,7 +1038,7 @@ DEFUN (no_debug_ospf_instance_nsm,
   int idx_number = 3;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1115,7 +1115,7 @@ DEFUN (debug_ospf_instance_lsa,
   int idx_number = 2;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1194,7 +1194,7 @@ DEFUN (no_debug_ospf_instance_lsa,
   int idx_number = 3;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1259,7 +1259,7 @@ DEFUN (debug_ospf_instance_zebra,
   int idx_number = 2;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1327,7 +1327,7 @@ DEFUN (no_debug_ospf_instance_zebra,
   int idx_number = 3;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1374,7 +1374,7 @@ DEFUN (debug_ospf_instance_event,
   int idx_number = 2;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1396,7 +1396,7 @@ DEFUN (no_debug_ospf_instance_event,
   int idx_number = 3;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1444,7 +1444,7 @@ DEFUN (debug_ospf_instance_nssa,
   int idx_number = 2;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1466,7 +1466,7 @@ DEFUN (no_debug_ospf_instance_nssa,
   int idx_number = 3;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if (!ospf_lookup_instance (instance))
     return CMD_SUCCESS;
 
@@ -1568,95 +1568,91 @@ show_debugging_ospf_common (struct vty *vty, struct ospf *ospf)
   int i;
 
   if (ospf->instance)
-    vty_out (vty, "%sOSPF Instance: %d%s%s", VTY_NEWLINE, ospf->instance,
-             VTY_NEWLINE, VTY_NEWLINE);
+    vty_out (vty, "\nOSPF Instance: %d\n\n", ospf->instance);
 
-  vty_out (vty, "OSPF debugging status:%s", VTY_NEWLINE);
+  vty_out (vty, "OSPF debugging status:\n");
 
   /* Show debug status for events. */
   if (IS_DEBUG_OSPF(event,EVENT))
-    vty_out (vty, "  OSPF event debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF event debugging is on\n");
 
   /* Show debug status for ISM. */
   if (IS_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
-    vty_out (vty, "  OSPF ISM debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF ISM debugging is on\n");
   else
     {
       if (IS_DEBUG_OSPF (ism, ISM_STATUS))
-	vty_out (vty, "  OSPF ISM status debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF ISM status debugging is on\n");
       if (IS_DEBUG_OSPF (ism, ISM_EVENTS))
-	vty_out (vty, "  OSPF ISM event debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF ISM event debugging is on\n");
       if (IS_DEBUG_OSPF (ism, ISM_TIMERS))
-	vty_out (vty, "  OSPF ISM timer debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF ISM timer debugging is on\n");
     }
 
   /* Show debug status for NSM. */
   if (IS_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
-    vty_out (vty, "  OSPF NSM debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF NSM debugging is on\n");
   else
     {
       if (IS_DEBUG_OSPF (nsm, NSM_STATUS))
-	vty_out (vty, "  OSPF NSM status debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF NSM status debugging is on\n");
       if (IS_DEBUG_OSPF (nsm, NSM_EVENTS))
-	vty_out (vty, "  OSPF NSM event debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF NSM event debugging is on\n");
       if (IS_DEBUG_OSPF (nsm, NSM_TIMERS))
-	vty_out (vty, "  OSPF NSM timer debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF NSM timer debugging is on\n");
     }
 
   /* Show debug status for OSPF Packets. */
   for (i = 0; i < 5; i++)
     if (IS_DEBUG_OSPF_PACKET (i, SEND) && IS_DEBUG_OSPF_PACKET (i, RECV))
       {
-	vty_out (vty, "  OSPF packet %s%s debugging is on%s",
-		 LOOKUP (ospf_packet_type_str, i + 1),
-		 IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-		 VTY_NEWLINE);
+	vty_out (vty, "  OSPF packet %s%s debugging is on\n",
+		   lookup_msg(ospf_packet_type_str, i + 1, NULL),
+		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "");
       }
     else
       {
 	if (IS_DEBUG_OSPF_PACKET (i, SEND))
-	  vty_out (vty, "  OSPF packet %s send%s debugging is on%s",
-		   LOOKUP (ospf_packet_type_str, i + 1),
-		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-		   VTY_NEWLINE);
+	  vty_out (vty, "  OSPF packet %s send%s debugging is on\n",
+		     lookup_msg(ospf_packet_type_str, i + 1, NULL),
+		     IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "");
 	if (IS_DEBUG_OSPF_PACKET (i, RECV))
-	  vty_out (vty, "  OSPF packet %s receive%s debugging is on%s",
-		   LOOKUP (ospf_packet_type_str, i + 1),
-		   IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "",
-		   VTY_NEWLINE);
+	  vty_out (vty, "  OSPF packet %s receive%s debugging is on\n",
+		     lookup_msg(ospf_packet_type_str, i + 1, NULL),
+		     IS_DEBUG_OSPF_PACKET (i, DETAIL) ? " detail" : "");
       }
 
   /* Show debug status for OSPF LSAs. */
   if (IS_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
-    vty_out (vty, "  OSPF LSA debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF LSA debugging is on\n");
   else
     {
       if (IS_DEBUG_OSPF (lsa, LSA_GENERATE))
-	vty_out (vty, "  OSPF LSA generation debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF LSA generation debugging is on\n");
       if (IS_DEBUG_OSPF (lsa, LSA_FLOODING))
-	vty_out (vty, "  OSPF LSA flooding debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF LSA flooding debugging is on\n");
       if (IS_DEBUG_OSPF (lsa, LSA_INSTALL))
-	vty_out (vty, "  OSPF LSA install debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF LSA install debugging is on\n");
       if (IS_DEBUG_OSPF (lsa, LSA_REFRESH))
-	vty_out (vty, "  OSPF LSA refresh debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF LSA refresh debugging is on\n");
     }
 
   /* Show debug status for Zebra. */
   if (IS_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
-    vty_out (vty, "  OSPF Zebra debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF Zebra debugging is on\n");
   else
     {
       if (IS_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
-	vty_out (vty, "  OSPF Zebra interface debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF Zebra interface debugging is on\n");
       if (IS_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
-	vty_out (vty, "  OSPF Zebra redistribute debugging is on%s", VTY_NEWLINE);
+	vty_out (vty, "  OSPF Zebra redistribute debugging is on\n");
     }
 
   /* Show debug status for NSSA. */
   if (IS_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
-    vty_out (vty, "  OSPF NSSA debugging is on%s", VTY_NEWLINE);
+    vty_out (vty, "  OSPF NSSA debugging is on\n");
 
-  vty_out (vty, "%s", VTY_NEWLINE);
+  vty_out (vty, "\n");
 
   return CMD_SUCCESS;
 }
@@ -1688,7 +1684,7 @@ DEFUN (show_debugging_ospf_instance,
   struct ospf *ospf;
   u_short instance = 0;
 
-  VTY_GET_INTEGER ("Instance", instance, argv[idx_number]->arg);
+  instance = strtoul(argv[idx_number]->arg, NULL, 10);
   if ((ospf = ospf_lookup_instance (instance)) == NULL )
     return CMD_SUCCESS;
 
@@ -1725,56 +1721,56 @@ config_write_debug (struct vty *vty)
 
   /* debug ospf ism (status|events|timers). */
   if (IS_CONF_DEBUG_OSPF (ism, ISM) == OSPF_DEBUG_ISM)
-    vty_out (vty, "debug ospf%s ism%s", str, VTY_NEWLINE);
+    vty_out (vty, "debug ospf%s ism\n", str);
   else
     {
       if (IS_CONF_DEBUG_OSPF (ism, ISM_STATUS))
-	vty_out (vty, "debug ospf%s ism status%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s ism status\n", str);
       if (IS_CONF_DEBUG_OSPF (ism, ISM_EVENTS))
-	vty_out (vty, "debug ospf%s ism event%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s ism event\n", str);
       if (IS_CONF_DEBUG_OSPF (ism, ISM_TIMERS))
-	vty_out (vty, "debug ospf%s ism timer%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s ism timer\n", str);
     }
 
   /* debug ospf nsm (status|events|timers). */
   if (IS_CONF_DEBUG_OSPF (nsm, NSM) == OSPF_DEBUG_NSM)
-    vty_out (vty, "debug ospf%s nsm%s", str, VTY_NEWLINE);
+    vty_out (vty, "debug ospf%s nsm\n", str);
   else
     {
       if (IS_CONF_DEBUG_OSPF (nsm, NSM_STATUS))
-	vty_out (vty, "debug ospf%s nsm status%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s nsm status\n", str);
       if (IS_CONF_DEBUG_OSPF (nsm, NSM_EVENTS))
-	vty_out (vty, "debug ospf%s nsm event%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s nsm event\n", str);
       if (IS_CONF_DEBUG_OSPF (nsm, NSM_TIMERS))
-	vty_out (vty, "debug ospf%s nsm timer%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s nsm timer\n", str);
     }
 
   /* debug ospf lsa (generate|flooding|install|refresh). */
   if (IS_CONF_DEBUG_OSPF (lsa, LSA) == OSPF_DEBUG_LSA)
-    vty_out (vty, "debug ospf%s lsa%s", str, VTY_NEWLINE);
+    vty_out (vty, "debug ospf%s lsa\n", str);
   else
     {
       if (IS_CONF_DEBUG_OSPF (lsa, LSA_GENERATE))
-	vty_out (vty, "debug ospf%s lsa generate%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s lsa generate\n", str);
       if (IS_CONF_DEBUG_OSPF (lsa, LSA_FLOODING))
-	vty_out (vty, "debug ospf%s lsa flooding%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s lsa flooding\n", str);
       if (IS_CONF_DEBUG_OSPF (lsa, LSA_INSTALL))
-	vty_out (vty, "debug ospf%s lsa install%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s lsa install\n", str);
       if (IS_CONF_DEBUG_OSPF (lsa, LSA_REFRESH))
-	vty_out (vty, "debug ospf%s lsa refresh%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s lsa refresh\n", str);
 
       write = 1;
     }
 
   /* debug ospf zebra (interface|redistribute). */
   if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA) == OSPF_DEBUG_ZEBRA)
-    vty_out (vty, "debug ospf%s zebra%s", str, VTY_NEWLINE);
+    vty_out (vty, "debug ospf%s zebra\n", str);
   else
     {
       if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_INTERFACE))
-	vty_out (vty, "debug ospf%s zebra interface%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s zebra interface\n", str);
       if (IS_CONF_DEBUG_OSPF (zebra, ZEBRA_REDISTRIBUTE))
-	vty_out (vty, "debug ospf%s zebra redistribute%s", str, VTY_NEWLINE);
+	vty_out (vty, "debug ospf%s zebra redistribute\n", str);
 
       write = 1;
     }
@@ -1782,14 +1778,14 @@ config_write_debug (struct vty *vty)
   /* debug ospf event. */
   if (IS_CONF_DEBUG_OSPF (event, EVENT) == OSPF_DEBUG_EVENT)
     {
-      vty_out (vty, "debug ospf%s event%s", str, VTY_NEWLINE);
+      vty_out (vty, "debug ospf%s event\n", str);
       write = 1;
     }
 
   /* debug ospf nssa. */
   if (IS_CONF_DEBUG_OSPF (nssa, NSSA) == OSPF_DEBUG_NSSA)
     {
-      vty_out (vty, "debug ospf%s nssa%s", str, VTY_NEWLINE);
+      vty_out (vty, "debug ospf%s nssa\n", str);
       write = 1;
     }
   
@@ -1799,7 +1795,7 @@ config_write_debug (struct vty *vty)
     r &= conf_debug_ospf_packet[i] & (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL);
   if (r == (OSPF_DEBUG_SEND_RECV|OSPF_DEBUG_DETAIL))
     {
-      vty_out (vty, "debug ospf%s packet all detail%s", str, VTY_NEWLINE);
+      vty_out (vty, "debug ospf%s packet all detail\n", str);
       return 1;
     }
 
@@ -1809,12 +1805,11 @@ config_write_debug (struct vty *vty)
     r &= conf_debug_ospf_packet[i] & OSPF_DEBUG_SEND_RECV;
   if (r == OSPF_DEBUG_SEND_RECV)
     {
-      vty_out (vty, "debug ospf%s packet all%s", str, VTY_NEWLINE);
+      vty_out (vty, "debug ospf%s packet all\n", str);
       for (i = 0; i < 5; i++)
 	if (conf_debug_ospf_packet[i] & OSPF_DEBUG_DETAIL)
-	  vty_out (vty, "debug ospf%s packet %s detail%s", str,
-		   type_str[i],
-		   VTY_NEWLINE);
+	  vty_out (vty, "debug ospf%s packet %s detail\n", str,
+		   type_str[i]);
       return 1;
     }
 
@@ -1825,9 +1820,8 @@ config_write_debug (struct vty *vty)
       if (conf_debug_ospf_packet[i] == 0)
 	continue;
       
-      vty_out (vty, "debug ospf%s packet %s%s%s", str,
-	       type_str[i], detail_str[conf_debug_ospf_packet[i]],
-	       VTY_NEWLINE);
+      vty_out (vty, "debug ospf%s packet %s%s\n", str,
+	       type_str[i],detail_str[conf_debug_ospf_packet[i]]);
       write = 1;
     }
 

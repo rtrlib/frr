@@ -159,15 +159,13 @@ dynhn_print_all (struct vty *vty)
   struct listnode *node;
   struct isis_dynhn *dyn;
 
-  vty_out (vty, "Level  System ID      Dynamic Hostname%s", VTY_NEWLINE);
+  vty_out (vty, "Level  System ID      Dynamic Hostname\n");
   for (ALL_LIST_ELEMENTS_RO (dyn_cache, node, dyn))
     {
       vty_out (vty, "%-7d", dyn->level);
-      vty_out (vty, "%-15s%-15s%s", sysid_print (dyn->id), dyn->name.name,
-	       VTY_NEWLINE);
+      vty_out (vty, "%-15s%-15s\n", sysid_print (dyn->id),dyn->name.name);
     }
 
-  vty_out (vty, "     * %s %s%s", sysid_print (isis->sysid), unix_hostname (),
-	   VTY_NEWLINE);
+  vty_out (vty, "     * %s %s\n", sysid_print (isis->sysid),unix_hostname());
   return;
 }

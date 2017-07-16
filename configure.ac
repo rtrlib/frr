@@ -23,7 +23,36 @@ dnl Get hostname and other information.
 dnl -----------------------------------
 AC_CANONICAL_BUILD()
 AC_CANONICAL_HOST()
-AC_CANONICAL_TARGET()
+
+AS_IF([test "$host" != "$build"], [
+  if test "$srcdir" = "."; then
+    AC_MSG_ERROR([cross-compilation is only possible with builddir separate from srcdir.  create a separate directory and run as .../path-to-frr/configure.])
+  fi
+  test -d hosttools || mkdir hosttools
+  abssrc="`cd \"${srcdir}\"; pwd`"
+
+  AC_MSG_NOTICE([...])
+  AC_MSG_NOTICE([... cross-compilation: creating hosttools directory and self-configuring for build platform tools])
+  AC_MSG_NOTICE([... use HOST_CPPFLAGS / HOST_CFLAGS / HOST_LDFLAGS if neccessary])
+  AC_MSG_NOTICE([...])
+
+  ( CPPFLAGS="$HOST_CPPFLAGS"; \
+    CFLAGS="$HOST_CFLAGS"; \
+    LDFLAGS="$HOST_LDFLAGS"; \
+    cd hosttools; "${abssrc}/configure" "--host=$build" "--build=$build"; )
+
+  AC_MSG_NOTICE([...])
+  AC_MSG_NOTICE([... cross-compilation: finished self-configuring for build platform tools])
+  AC_MSG_NOTICE([...])
+
+  build_clippy="false"
+  CLIPPYDIR="hosttools/lib"
+], [
+  build_clippy="true"
+  CLIPPYDIR="lib"
+])
+AC_SUBST(CLIPPYDIR)
+AM_CONDITIONAL([BUILD_CLIPPY], [$build_clippy])
 
 # Disable portability warnings -- our automake code (in particular
 # common.am) uses some constructs specific to gmake.
@@ -98,7 +127,7 @@ dnl autoconf 2.59 appears not to support AC_PROG_SED
 dnl AC_PROG_SED
 AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 
-dnl try and enable CFLAGS that are useful for Quagga
+dnl try and enable CFLAGS that are useful for FRR
 dnl - specifically, options to control warnings
 
 AC_USE_SYSTEM_EXTENSIONS
@@ -119,6 +148,28 @@ AC_DEFUN([AC_C_FLAG], [{
 			CFLAGS="$ac_c_flag_save"
 			AC_MSG_RESULT([no])
 			$2
+		])
+	AC_LANG_POP(C)
+	}])
+
+AC_DEFUN([AC_LINK_IFELSE_FLAGS], [{
+	AC_LANG_PUSH(C)
+	ac_cflags_save="$CFLAGS"
+	ac_libs_save="$LIBS"
+	CFLAGS="$CFLAGS $1"
+	LIBS="$LIBS $2"
+	AC_LINK_IFELSE(
+		[$3],
+		[
+			AC_MSG_RESULT([yes])
+			CFLAGS="$ac_cflags_save"
+			LIBS="$ac_libs_save"
+			$5
+		], [
+			AC_MSG_RESULT([no])
+			CFLAGS="$ac_cflags_save"
+			LIBS="$ac_libs_save"
+			$4
 		])
 	AC_LANG_POP(C)
 	}])
@@ -198,7 +249,7 @@ AX_PTHREAD([
   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
   LIBS="$PTHREAD_LIBS $LIBS"
 ], [
-  AC_MSG_FAILURE([This Quagga version needs pthreads])
+  AC_MSG_FAILURE([This FRR version needs pthreads])
 ])
 
 dnl --------------
@@ -232,7 +283,7 @@ AC_ARG_WITH(vtysh_pager,
 	AS_HELP_STRING([--with-vtysh-pager=PAGER], [control what pager is compiled in as default]),
 	VTYSH_PAGER=$withval, VTYSH_PAGER="more")
 AC_ARG_ENABLE(vtysh,
-  AS_HELP_STRING([--disable-vtysh], [do not build integrated vty shell for Quagga]))
+  AS_HELP_STRING([--disable-vtysh], [do not build integrated vty shell for FRR]))
 AC_ARG_ENABLE(doc,
   AS_HELP_STRING([--disable-doc], [do not build docs]))
 AC_ARG_ENABLE(zebra,
@@ -253,6 +304,8 @@ AC_ARG_ENABLE(nhrpd,
   AS_HELP_STRING([--disable-nhrpd], [do not build nhrpd]))
 AC_ARG_ENABLE(eigrpd,
   AS_HELP_STRING([--disable-eigrpd], [do not build eigrpd]))
+AC_ARG_ENABLE(babeld,
+  AS_HELP_STRING([--disable-babeld], [do not build babeld]))
 AC_ARG_ENABLE(watchfrr,
   AS_HELP_STRING([--disable-watchfrr], [do not build watchfrr]))
 AC_ARG_ENABLE(isisd,
@@ -408,6 +461,77 @@ if test "x${enable_dev_build}" = "xyes"; then
    AC_DEFINE(DEV_BUILD,,Build for development)
 fi
 AM_CONDITIONAL([DEV_BUILD], [test "x$enable_dev_build" = "xyes"])
+
+#
+# Python for clippy
+#
+AS_IF([test "$host" = "$build"], [
+  PYTHONCONFIG=""
+
+  # ordering:
+  # 1.  try python3, but respect the user's preference on which minor ver
+  # 2.  try python, which might be py3 or py2 again on the user's preference
+  # 3.  try python2 (can really only be 2.7 but eh)
+  # 4.  try 3.5 > 3.4 > 3.3 > 3.2 > 2.7 through pkg-config (no user pref)
+  #
+  # (AX_PYTHON_DEVEL has no clue about py3 vs py2)
+  # (AX_PYTHON does not do what we need)
+
+  AC_CHECK_TOOLS([PYTHONCONFIG], [python3-config python-config python2-config])
+  if test -n "$PYTHONCONFIG"; then
+    PYTHON_CFLAGS="`\"${PYTHONCONFIG}\" --includes`"
+    PYTHON_LIBS="`\"${PYTHONCONFIG}\" --libs`"
+
+    AC_MSG_CHECKING([whether we found a working Python version])
+    AC_LINK_IFELSE_FLAGS([$PYTHON_CFLAGS], [$PYTHON_LIBS], [AC_LANG_PROGRAM([
+#include <Python.h>
+#if PY_VERSION_HEX < 0x02070000
+#error python too old
+#endif
+int main(void);
+],
+[
+{
+  Py_Initialize();
+  return 0;
+}
+])], [
+      PYTHONCONFIG=""
+      unset PYTHON_LIBS
+      unset PYTHON_CFLAGS
+    ])
+  fi
+
+  if test -z "$PYTHONCONFIG"; then
+    PKG_CHECK_MODULES([PYTHON], python-3.5, [], [
+      PKG_CHECK_MODULES([PYTHON], python-3.4, [], [
+        PKG_CHECK_MODULES([PYTHON], python-3.3, [], [
+          PKG_CHECK_MODULES([PYTHON], python-3.2, [], [
+            PKG_CHECK_MODULES([PYTHON], python-2.7, [], [
+              AC_MSG_FAILURE([could not find python-config or pkg-config python, please install Python development files from libpython-dev or similar])
+              ])])])])])
+
+
+    AC_MSG_CHECKING([whether we found a working Python version])
+    AC_LINK_IFELSE_FLAGS([$PYTHON_CFLAGS], [$PYTHON_LIBS], [AC_LANG_PROGRAM([
+#include <Python.h>
+#if PY_VERSION_HEX < 0x02070000
+#error python too old
+#endif
+int main(void);
+],
+[
+{
+  Py_Initialize();
+  return 0;
+}
+])], [
+      AC_MSG_FAILURE([could not find python-config or pkg-config python, please install Python development files from libpython-dev or similar])
+    ])
+  fi
+])
+AC_SUBST(PYTHON_CFLAGS)
+AC_SUBST(PYTHON_LIBS)
 
 #
 # Logic for protobuf support.
@@ -817,7 +941,7 @@ AM_CONDITIONAL(VTYSH, test "x$VTYSH" = "xvtysh")
 dnl ----------
 dnl PAM module
 dnl
-dnl Quagga detects the PAM library it is built against by checking for a
+dnl FRR detects the PAM library it is built against by checking for a
 dnl functional pam_misc.h (Linux-PAM) or openpam.h (OpenPAM) header. pam_misc.h
 dnl is known to #include pam_appl.h, the standard header of a PAM library, and
 dnl openpam.h doesn't do that, although depends on the header too. Hence a
@@ -917,8 +1041,7 @@ dnl other functions
 dnl ---------------
 AC_CHECK_FUNCS([ \
 	strlcat strlcpy \
-	getgrouplist \
-	pledge])
+	getgrouplist])
 
 AC_CHECK_HEADER([asm-generic/unistd.h],
                 [AC_CHECK_DECL(__NR_setns,
@@ -1285,14 +1408,6 @@ AM_CONDITIONAL(OSPFD, test "x$OSPFD" = "xospfd")
 if test "${enable_ldpd}" = "no";then
   LDPD=""
 else
-  AX_PROG_PERL_MODULES(XML::LibXML, , [
-    if test -f "${srcdir}/ldpd/ldp_vty_cmds.c"; then
-      AC_MSG_WARN([XML::LibXML perl module not found, using pregenerated ldp_vty_cmds.c])
-    else
-      AC_MSG_ERROR([XML::LibXML perl module not found and pregenerated ldp_vty_cmds.c missing])
-    fi
-  ])
-
   LDPD="ldpd"
   AC_DEFINE(HAVE_LDPD, 1, ldpd)
 fi
@@ -1340,6 +1455,12 @@ case "${enable_ripngd}" in
   *    ) RIPNGD="ripngd";;
 esac
 AM_CONDITIONAL(RIPNGD, test "x$RIPNGD" = "xripngd")
+
+case "${enable_babeld}" in
+  "no" ) BABELD="";;
+  *    ) BABELD="babeld";;
+esac
+AM_CONDITIONAL(BABELD, test "x$BABELD" = "xbabeld")
 
 case "${enable_ospf6d}" in
   "no" ) OSPF6D="";;
@@ -1391,6 +1512,7 @@ AC_SUBST(ZEBRA)
 AC_SUBST(RFPTEST)
 AC_SUBST(LIBRFP)
 AC_SUBST(RFPINC)
+AC_SUBST(BABELD)
 AC_SUBST(BGPD)
 AC_SUBST(RIPD)
 AC_SUBST(RIPNGD)
@@ -1414,8 +1536,9 @@ dnl ---------------------------
 dnl check system has PCRE regexp
 dnl ---------------------------
 if test "x$enable_pcreposix" = "xyes"; then
-  AC_CHECK_LIB(pcreposix, pcreposix_regexec, ,[enable_pcreposix=no
-  AC_MSG_WARN([*** falling back to other regex library ***]) ])
+  AC_CHECK_LIB(pcreposix, regexec, [], [
+    AC_MSG_ERROR([--enable-pcreposix given but unable to find libpcreposix])
+  ])
 fi
 AC_SUBST(HAVE_LIBPCREPOSIX)
 
@@ -1423,7 +1546,9 @@ dnl ------------------
 dnl check C-Ares library
 dnl ------------------
 if test "${NHRPD}" != ""; then
-   PKG_CHECK_MODULES([CARES], [libcares])
+  PKG_CHECK_MODULES([CARES], [libcares], , [
+    AC_MSG_ERROR([trying to build nhrpd, but libcares not found. install c-ares and its -dev headers.])
+  ])
 fi
 
 
@@ -1438,15 +1563,14 @@ if test "${enable_snmp}" != ""; then
    SNMP_LIBS="`${NETSNMP_CONFIG} --agent-libs`"
    SNMP_CFLAGS="`${NETSNMP_CONFIG} --base-cflags`"
    AC_MSG_CHECKING([whether we can link to Net-SNMP])
-   AC_LINK_IFELSE([AC_LANG_PROGRAM([
+   AC_LINK_IFELSE_FLAGS([$SNMP_CFLAGS], [$SNMP_LIBS], [AC_LANG_PROGRAM([
 int main(void);
 ],
 [
 {
   return 0;
 }
-])],[AC_MSG_RESULT(yes)],[
-     AC_MSG_RESULT(no)
+])], [
      AC_MSG_ERROR([--enable-snmp given but not usable])])
    case "${enable_snmp}" in
      yes)
@@ -1466,6 +1590,11 @@ fi
 AM_CONDITIONAL([SNMP], [test "x${SNMP_METHOD}" != "x"])
 AC_SUBST(SNMP_LIBS)
 AC_SUBST(SNMP_CFLAGS)
+
+dnl ---------------
+dnl math
+dnl ---------------
+AC_SEARCH_LIBS([sqrt], [m])
 
 dnl ---------------
 dnl dlopen & dlinfo
@@ -1632,10 +1761,10 @@ dnl --------------------------------------
 
 AM_PROG_LEX
 AC_MSG_CHECKING(version of flex)
-quagga_ac_flex_version="$(eval $LEX -V | grep flex | head -n 1)"
-quagga_ac_flex_version="${quagga_ac_flex_version##* }"
-AC_MSG_RESULT([$quagga_ac_flex_version])
-AX_COMPARE_VERSION([$quagga_ac_flex_version], [lt], [2.5.20], [
+frr_ac_flex_version="$(eval $LEX -V | grep flex | head -n 1)"
+frr_ac_flex_version="${frr_ac_flex_version##* }"
+AC_MSG_RESULT([$frr_ac_flex_version])
+AX_COMPARE_VERSION([$frr_ac_flex_version], [lt], [2.5.20], [
   LEX="$SHELL $missing_dir/missing flex"
   if test -f "${srcdir}/lib/command_lex.c" -a -f "${srcdir}/lib/command_lex.h"; then
     AC_MSG_WARN([using pregenerated flex output files])
@@ -1649,38 +1778,38 @@ AX_COMPARE_VERSION([$quagga_ac_flex_version], [lt], [2.5.20], [
 AC_PROG_YACC
 dnl thanks GNU bison for this b*llshit...
 AC_MSG_CHECKING(version of bison)
-quagga_ac_bison_version="$(eval $YACC -V | grep bison | head -n 1)"
-quagga_ac_bison_version="${quagga_ac_bison_version##* }"
-quagga_ac_bison_missing="false"
-case "x${quagga_ac_bison_version}" in
+frr_ac_bison_version="$(eval $YACC -V | grep bison | head -n 1)"
+frr_ac_bison_version="${frr_ac_bison_version##* }"
+frr_ac_bison_missing="false"
+case "x${frr_ac_bison_version}" in
   x2.7*)
     BISON_OPENBRACE='"'
     BISON_CLOSEBRACE='"'
     BISON_VERBOSE=''
-    AC_MSG_RESULT([$quagga_ac_bison_version - 2.7 or older])
+    AC_MSG_RESULT([$frr_ac_bison_version - 2.7 or older])
     ;;
   x2.*|x1.*)
-    AC_MSG_RESULT([$quagga_ac_bison_version])
+    AC_MSG_RESULT([$frr_ac_bison_version])
     AC_MSG_WARN([installed bison is too old.  Please install GNU bison 2.7.x or newer.])
-    quagga_ac_bison_missing="true"
+    frr_ac_bison_missing="true"
     ;;
   x)
     AC_MSG_RESULT([none])
     AC_MSG_WARN([could not determine bison version.  Please install GNU bison 2.7.x or newer.])
-    quagga_ac_bison_missing="true"
+    frr_ac_bison_missing="true"
     ;;
   *)
     BISON_OPENBRACE='{'
     BISON_CLOSEBRACE='}'
     BISON_VERBOSE='-Dparse.error=verbose'
-    AC_MSG_RESULT([$quagga_ac_bison_version - 3.0 or newer])
+    AC_MSG_RESULT([$frr_ac_bison_version - 3.0 or newer])
     ;;
 esac
 AC_SUBST(BISON_OPENBRACE)
 AC_SUBST(BISON_CLOSEBRACE)
 AC_SUBST(BISON_VERBOSE)
 
-if $quagga_ac_bison_missing; then
+if $frr_ac_bison_missing; then
   YACC="$SHELL $missing_dir/missing bison -y"
   if test -f "${srcdir}/lib/command_parse.c" -a -f "${srcdir}/lib/command_parse.h"; then
     AC_MSG_WARN([using pregenerated bison output files])
@@ -1855,18 +1984,21 @@ AC_CACHE_VAL(ac_cv_htonl_works,
 )
 AC_MSG_RESULT($ac_cv_htonl_works)
 
-AC_CONFIG_FILES([Makefile lib/Makefile qpb/Makefile zebra/Makefile ripd/Makefile 
+AC_CONFIG_FILES([Makefile lib/Makefile qpb/Makefile zebra/Makefile ripd/Makefile
 	  ripngd/Makefile bgpd/Makefile ospfd/Makefile watchfrr/Makefile
 	  ospf6d/Makefile ldpd/Makefile isisd/Makefile vtysh/Makefile
 	  doc/Makefile ospfclient/Makefile tests/Makefile m4/Makefile
+	  bgpd/rfp-example/rfptest/Makefile bgpd/rfp-example/librfp/Makefile
+	  babeld/Makefile
 	  pimd/Makefile
 	  eigrpd/Makefile
 	  nhrpd/Makefile
 	  redhat/Makefile
 	  tools/Makefile
 	  pkgsrc/Makefile
+	  python/Makefile
 	  fpm/Makefile
-	  redhat/frr.spec 
+	  redhat/frr.spec
 	  snapcraft/Makefile
 	  snapcraft/snapcraft.yaml
 	  lib/version.h
@@ -1891,19 +2023,12 @@ AC_CONFIG_FILES([Makefile lib/Makefile qpb/Makefile zebra/Makefile ripd/Makefile
 	  pkgsrc/ripd.sh pkgsrc/ripngd.sh pkgsrc/zebra.sh
 	  pkgsrc/eigrpd.sh])
 
-if test "${enable_bgp_vnc}" != "no"; then
-   if test "${with_rfp_path}" = "bgpd/rfp-example" ; then 
-     AC_CONFIG_FILES([bgpd/rfp-example/rfptest/Makefile bgpd/rfp-example/librfp/Makefile])
-   else
-     AC_CONFIG_FILES([${with_rfp_path}/rfptest/Makefile ${with_rfp_path}/librfp/Makefile])
-   fi
-fi
 
 AC_CONFIG_FILES([solaris/Makefile])
 
 AC_CONFIG_FILES([vtysh/extract.pl],[chmod +x vtysh/extract.pl])
 
-## Hack, but working solution to avoid rebuilding of quagga.info.
+## Hack, but working solution to avoid rebuilding of frr.info.
 ## It's already in CVS until texinfo 4.7 is more common.
 AC_OUTPUT
 

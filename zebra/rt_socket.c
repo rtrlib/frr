@@ -29,6 +29,7 @@
 #include "sockunion.h"
 #include "log.h"
 #include "privs.h"
+#include "vxlan.h"
 
 #include "zebra/debug.h"
 #include "zebra/rib.h"
@@ -71,7 +72,7 @@ sin_masklen (struct in_addr mask)
 
 /* Interface between zebra message and rtm message. */
 static int
-kernel_rtm_ipv4 (int cmd, struct prefix *p, struct rib *rib)
+kernel_rtm_ipv4 (int cmd, struct prefix *p, struct route_entry *re)
 
 {
   struct sockaddr_in *mask = NULL;
@@ -80,8 +81,7 @@ kernel_rtm_ipv4 (int cmd, struct prefix *p, struct rib *rib)
   struct sockaddr_mpls smpls;
 #endif
   union sockunion *smplsp = NULL;
-  struct nexthop *nexthop, *tnexthop;
-  int recursing;
+  struct nexthop *nexthop;
   int nexthop_num = 0;
   ifindex_t ifindex = 0;
   int gate = 0;
@@ -106,7 +106,7 @@ kernel_rtm_ipv4 (int cmd, struct prefix *p, struct rib *rib)
 #endif /* HAVE_STRUCT_SOCKADDR_IN_SIN_LEN */
 
   /* Make gateway. */
-  for (ALL_NEXTHOPS_RO(rib->nexthop, nexthop, tnexthop, recursing))
+  for (ALL_NEXTHOPS(re->nexthop, nexthop))
     {
       if (CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
         continue;
@@ -172,16 +172,16 @@ kernel_rtm_ipv4 (int cmd, struct prefix *p, struct rib *rib)
 			     gate ? (union sockunion *)&sin_gate : NULL,
 			     smplsp,
 			     ifindex,
-			     rib->flags,
-			     rib->metric);
+			     re->flags,
+			     re->metric);
 
            if (IS_ZEBRA_DEBUG_RIB)
            {
              if (!gate)
              {
-               zlog_debug ("%s: %s: attention! gate not found for rib %p",
-                 __func__, prefix_buf, rib);
-               rib_dump (p, NULL, rib);
+               zlog_debug ("%s: %s: attention! gate not found for re %p",
+                 __func__, prefix_buf, re);
+               route_entry_dump (p, NULL, re);
              }
              else
                inet_ntop (AF_INET, &sin_gate.sin_addr, gate_buf, INET_ADDRSTRLEN);
@@ -218,19 +218,19 @@ kernel_rtm_ipv4 (int cmd, struct prefix *p, struct rib *rib)
              default:
                zlog_err ("%s: %s: rtm_write() unexpectedly returned %d for command %s",
                  __func__, prefix2str(p, prefix_buf, sizeof(prefix_buf)),
-                 error, lookup (rtm_type_str, cmd));
+                 error, lookup_msg(rtm_type_str, cmd, NULL));
                break;
            }
          } /* if (cmd and flags make sense) */
        else
          if (IS_ZEBRA_DEBUG_RIB)
            zlog_debug ("%s: odd command %s for flags %d",
-             __func__, lookup (rtm_type_str, cmd), nexthop->flags);
-     } /* for (ALL_NEXTHOPS_RO(...))*/
+             __func__, lookup_msg(rtm_type_str, cmd, NULL), nexthop->flags);
+     } /* for (ALL_NEXTHOPS(...))*/
  
    /* If there was no useful nexthop, then complain. */
    if (nexthop_num == 0 && IS_ZEBRA_DEBUG_KERNEL)
-     zlog_debug ("%s: No useful nexthops were found in RIB entry %p", __func__, rib);
+     zlog_debug ("%s: No useful nexthops were found in RIB entry %p", __func__, re);
 
   return 0; /*XXX*/
 }
@@ -262,12 +262,11 @@ sin6_masklen (struct in6_addr mask)
 
 /* Interface between zebra message and rtm message. */
 static int
-kernel_rtm_ipv6 (int cmd, struct prefix *p, struct rib *rib)
+kernel_rtm_ipv6 (int cmd, struct prefix *p, struct route_entry *re)
 {
   struct sockaddr_in6 *mask;
   struct sockaddr_in6 sin_dest, sin_mask, sin_gate;
-  struct nexthop *nexthop, *tnexthop;
-  int recursing;
+  struct nexthop *nexthop;
   int nexthop_num = 0;
   ifindex_t ifindex = 0;
   int gate = 0;
@@ -289,7 +288,7 @@ kernel_rtm_ipv6 (int cmd, struct prefix *p, struct rib *rib)
 #endif /* HAVE_STRUCT_SOCKADDR_IN_SIN_LEN */
 
   /* Make gateway. */
-  for (ALL_NEXTHOPS_RO(rib->nexthop, nexthop, tnexthop, recursing))
+  for (ALL_NEXTHOPS(re->nexthop, nexthop))
     {
       if (CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
 	continue;
@@ -349,8 +348,8 @@ kernel_rtm_ipv6 (int cmd, struct prefix *p, struct rib *rib)
 			gate ? (union sockunion *)&sin_gate : NULL,
 			NULL,
 			ifindex,
-			rib->flags,
-			rib->metric);
+			re->flags,
+			re->metric);
 
 #if 0
       if (error)
@@ -377,21 +376,21 @@ kernel_rtm_ipv6 (int cmd, struct prefix *p, struct rib *rib)
 }
 
 static int
-kernel_rtm (int cmd, struct prefix *p, struct rib *rib)
+kernel_rtm (int cmd, struct prefix *p, struct route_entry *re)
 {
   switch (PREFIX_FAMILY(p))
     {
     case AF_INET:
-      return kernel_rtm_ipv4 (cmd, p, rib);
+      return kernel_rtm_ipv4 (cmd, p, re);
     case AF_INET6:
-      return kernel_rtm_ipv6 (cmd, p, rib);
+      return kernel_rtm_ipv6 (cmd, p, re);
     }
   return 0;
 }
 
 int
 kernel_route_rib (struct prefix *p, struct prefix *src_p,
-                  struct rib *old, struct rib *new)
+                  struct route_entry *old, struct route_entry *new)
 {
   int route = 0;
 
@@ -425,6 +424,44 @@ kernel_neigh_update (int add, int ifindex, uint32_t addr, char *lla, int llalen)
 
 extern int
 kernel_get_ipmr_sg_stats (void *mroute)
+{
+  return 0;
+}
+
+int
+kernel_add_vtep (vni_t vni, struct interface *ifp, struct in_addr *vtep_ip)
+{
+  return 0;
+}
+
+int
+kernel_del_vtep (vni_t vni, struct interface *ifp, struct in_addr *vtep_ip)
+{
+  return 0;
+}
+
+int
+kernel_add_mac (struct interface *ifp, vlanid_t vid,
+                struct ethaddr *mac, struct in_addr vtep_ip,
+                u_char sticky)
+{
+  return 0;
+}
+
+int
+kernel_del_mac (struct interface *ifp, vlanid_t vid,
+                struct ethaddr *mac, struct in_addr vtep_ip, int local)
+{
+  return 0;
+}
+
+int kernel_add_neigh (struct interface *ifp, struct ipaddr *ip,
+                      struct ethaddr *mac)
+{
+  return 0;
+}
+
+int kernel_del_neigh (struct interface *ifp, struct ipaddr *ip)
 {
   return 0;
 }

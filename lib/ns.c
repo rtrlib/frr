@@ -39,7 +39,7 @@
 DEFINE_MTYPE_STATIC(LIB, NS,        "Logical-Router")
 DEFINE_MTYPE_STATIC(LIB, NS_NAME,   "Logical-Router Name")
 
-static __inline int ns_compare (struct ns *, struct ns *);
+static __inline int ns_compare (const struct ns *, const struct ns *);
 static struct ns *ns_lookup (ns_id_t);
 
 RB_GENERATE (ns_head, ns, entry, ns_compare)
@@ -108,7 +108,7 @@ static int ns_enable (struct ns *ns);
 static void ns_disable (struct ns *ns);
 
 static __inline int
-ns_compare(struct ns *a, struct ns *b)
+ns_compare(const struct ns *a, const struct ns *b)
 {
   return (a->ns_id - b->ns_id);
 }
@@ -296,8 +296,7 @@ ns_netns_pathname (struct vty *vty, const char *name)
 
   if (! result)
     {
-      vty_out (vty, "Invalid pathname: %s%s", safe_strerror (errno),
-               VTY_NEWLINE);
+      vty_out (vty, "Invalid pathname: %s\n",safe_strerror(errno));
       return NULL;
     }
   return pathname;
@@ -318,16 +317,16 @@ DEFUN_NOSH (ns_netns,
   char *pathname = ns_netns_pathname (vty, argv[idx_name]->arg);
 
   if (!pathname)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
-  VTY_GET_INTEGER ("NS ID", ns_id, argv[idx_number]->arg);
+  ns_id = strtoul (argv[idx_number]->arg, NULL, 10);
   ns = ns_get (ns_id);
 
   if (ns->name && strcmp (ns->name, pathname) != 0)
     {
-      vty_out (vty, "NS %u is already configured with NETNS %s%s",
-               ns->ns_id, ns->name, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "NS %u is already configured with NETNS %s\n",
+               ns->ns_id, ns->name);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (!ns->name)
@@ -335,9 +334,9 @@ DEFUN_NOSH (ns_netns,
 
   if (!ns_enable (ns))
     {
-      vty_out (vty, "Can not associate NS %u with NETNS %s%s",
-               ns->ns_id, ns->name, VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can not associate NS %u with NETNS %s\n",
+               ns->ns_id, ns->name);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   return CMD_SUCCESS;
@@ -359,21 +358,21 @@ DEFUN (no_ns_netns,
   char *pathname = ns_netns_pathname (vty, argv[idx_name]->arg);
 
   if (!pathname)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
-  VTY_GET_INTEGER ("NS ID", ns_id, argv[idx_number]->arg);
+  ns_id = strtoul(argv[idx_number]->arg, NULL, 10);
   ns = ns_lookup (ns_id);
 
   if (!ns)
     {
-      vty_out (vty, "NS %u is not found%s", ns_id, VTY_NEWLINE);
+      vty_out (vty, "NS %u is not found\n", ns_id);
       return CMD_SUCCESS;
     }
 
   if (ns->name && strcmp (ns->name, pathname) != 0)
     {
-      vty_out (vty, "Incorrect NETNS file name%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Incorrect NETNS file name\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   ns_disable (ns);
@@ -406,8 +405,7 @@ ns_config_write (struct vty *vty)
       if (ns->ns_id == NS_DEFAULT || ns->name == NULL)
 	continue;
 
-      vty_out (vty, "logical-router %u netns %s%s", ns->ns_id, ns->name,
-	       VTY_NEWLINE);
+      vty_out (vty, "logical-router %u netns %s\n", ns->ns_id,ns->name);
       write = 1;
   }
 
@@ -453,7 +451,7 @@ ns_terminate (void)
 {
   struct ns *ns;
 
-  while ((ns = RB_ROOT (&ns_tree)) != NULL)
+  while ((ns = RB_ROOT (ns_head, &ns_tree)) != NULL)
     ns_delete (ns);
 }
 

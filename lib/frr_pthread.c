@@ -55,7 +55,7 @@ void frr_pthread_init()
         pthread_mutex_lock(&pthread_table_mtx);
         {
                 pthread_table =
-                    hash_create(pthread_table_hash_key, pthread_table_hash_cmp);
+                    hash_create(pthread_table_hash_key, pthread_table_hash_cmp, NULL);
         }
         pthread_mutex_unlock(&pthread_table_mtx);
 }
@@ -86,7 +86,7 @@ struct frr_pthread *frr_pthread_new(const char *name, unsigned int id,
                             XCALLOC(MTYPE_FRR_PTHREAD,
                                     sizeof(struct frr_pthread));
                         fpt->id = id;
-                        fpt->master = thread_master_create();
+                        fpt->master = thread_master_create(name);
                         fpt->start_routine = start_routine;
                         fpt->stop_routine = stop_routine;
                         fpt->name = XSTRDUP(MTYPE_FRR_PTHREAD, name);

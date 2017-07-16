@@ -180,7 +180,7 @@ struct pim_interface *pim_if_new(struct interface *ifp, int igmp, int pim)
   pim_ifp->pim_ifchannel_list->cmp = (int (*)(void *, void *)) pim_ifchannel_compare;
 
   pim_ifp->pim_ifchannel_hash = hash_create (pim_ifchannel_hash_key,
-                                             pim_ifchannel_equal);
+                                             pim_ifchannel_equal, NULL);
 
   ifp->info = pim_ifp;
 
@@ -297,7 +297,7 @@ static int detect_primary_address_change(struct interface *ifp,
   int changed;
 
   if (force_prim_as_any)
-    new_prim_addr = qpim_inaddr_any;
+    new_prim_addr.s_addr = INADDR_ANY;
   else
     new_prim_addr = pim_find_primary_addr(ifp);
 

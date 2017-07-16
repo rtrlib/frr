@@ -21,6 +21,7 @@
 #ifndef _QUAGGA_BGP_TABLE_H
 #define _QUAGGA_BGP_TABLE_H
 
+#include "mpls.h"
 #include "table.h"
 
 struct bgp_table
@@ -30,9 +31,6 @@ struct bgp_table
   safi_t safi;
   
   int lock;
-
-  /* The owner of this 'bgp_table' structure. */
-  struct peer *owner;
 
   struct route_table *route_table;
   uint64_t version;
@@ -56,7 +54,7 @@ struct bgp_node
 
   struct bgp_node *prn;
 
-  u_char local_label[3];
+  mpls_label_t local_label;
 
   uint64_t version;
   u_char flags;

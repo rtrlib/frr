@@ -349,8 +349,8 @@ DEFUN (no_distribute_list,
 
   if (! ret)
     {
-      vty_out (vty, "distribute list doesn't exist%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "distribute list doesn't exist\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   return CMD_SUCCESS;
 }
@@ -393,9 +393,9 @@ config_show_distribute (struct vty *vty)
                                    DISTRIBUTE_V6_OUT, has_print);
     }
   if (has_print)
-    vty_out (vty, "%s", VTY_NEWLINE);
+    vty_out (vty, "\n");
   else
-    vty_out (vty, " not set%s", VTY_NEWLINE);
+    vty_out (vty, " not set\n");
 
   for (i = 0; i < disthash->size; i++)
     for (mp = disthash->index[i]; mp; mp = mp->next)
@@ -414,9 +414,9 @@ config_show_distribute (struct vty *vty)
             has_print = distribute_print(vty, dist->prefix, 1,
                                          DISTRIBUTE_V6_OUT, has_print);
             if (has_print)
-	      vty_out (vty, "%s", VTY_NEWLINE);
+	      vty_out (vty, "\n");
             else
-              vty_out(vty, " nothing%s", VTY_NEWLINE);
+              vty_out (vty, " nothing\n");
 	    }
       }
 
@@ -437,9 +437,9 @@ config_show_distribute (struct vty *vty)
                                    DISTRIBUTE_V6_IN, has_print);
     }
   if (has_print)
-    vty_out (vty, "%s", VTY_NEWLINE);
+    vty_out (vty, "\n");
   else
-    vty_out (vty, " not set%s", VTY_NEWLINE);
+    vty_out (vty, " not set\n");
 
   for (i = 0; i < disthash->size; i++)
     for (mp = disthash->index[i]; mp; mp = mp->next)
@@ -458,9 +458,9 @@ config_show_distribute (struct vty *vty)
             has_print = distribute_print(vty, dist->prefix, 1,
                                          DISTRIBUTE_V6_IN, has_print);
             if (has_print)
-	      vty_out (vty, "%s", VTY_NEWLINE);
+	      vty_out (vty, "\n");
             else
-              vty_out(vty, " nothing%s", VTY_NEWLINE);
+              vty_out (vty, " nothing\n");
 	    }
       }
   return 0;
@@ -487,12 +487,11 @@ config_write_distribute (struct vty *vty)
 	  if (dist->list[j]) {
 	    output = j == DISTRIBUTE_V4_OUT || j == DISTRIBUTE_V6_OUT;
             v6 = j == DISTRIBUTE_V6_IN || j == DISTRIBUTE_V6_OUT;
-	    vty_out (vty, " %sdistribute-list %s %s %s%s",
+	    vty_out (vty, " %sdistribute-list %s %s %s\n",
                      v6 ? "ipv6 " : "",
 		     dist->list[j],
 		     output ? "out" : "in",
-		     dist->ifname ? dist->ifname : "",
-		     VTY_NEWLINE);
+		     dist->ifname ? dist->ifname : "");
 	    write++;
 	  }
 
@@ -500,12 +499,11 @@ config_write_distribute (struct vty *vty)
 	  if (dist->prefix[j]) {
 	    output = j == DISTRIBUTE_V4_OUT || j == DISTRIBUTE_V6_OUT;
             v6 = j == DISTRIBUTE_V6_IN || j == DISTRIBUTE_V6_OUT;
-	    vty_out (vty, " %sdistribute-list prefix %s %s %s%s",
+	    vty_out (vty, " %sdistribute-list prefix %s %s %s\n",
                      v6 ? "ipv6 " : "",
 		     dist->prefix[j],
 		     output ? "out" : "in",
-		     dist->ifname ? dist->ifname : "",
-		     VTY_NEWLINE);
+		     dist->ifname ? dist->ifname : "");
 	    write++;
 	  }
       }
@@ -524,7 +522,8 @@ void
 distribute_list_init (int node)
 {
   disthash = hash_create (distribute_hash_make,
-                          (int (*) (const void *, const void *)) distribute_cmp);
+			  (int (*) (const void *, const void *))
+			  distribute_cmp, NULL);
 
   /* vtysh command-extraction doesn't grok install_element(node, ) */
   if (node == RIP_NODE) {

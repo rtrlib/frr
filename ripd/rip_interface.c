@@ -58,6 +58,7 @@ const struct message ri_version_msg[] =
   {RI_RIP_VERSION_2,       "2"},
   {RI_RIP_VERSION_1_AND_2, "1 2"},
   {RI_RIP_VERSION_NONE,    "none"},
+  { 0 }
 };
 
 extern struct zebra_privs_t ripd_privs;
@@ -1167,7 +1168,7 @@ static int
 rip_passive_nondefault_set (struct vty *vty, const char *ifname)
 {
   if (rip_passive_nondefault_lookup (ifname) >= 0)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   vector_set (Vrip_passive_nondefault, strdup (ifname));
 
@@ -1184,7 +1185,7 @@ rip_passive_nondefault_unset (struct vty *vty, const char *ifname)
 
   i = rip_passive_nondefault_lookup (ifname);
   if (i < 0)
-    return CMD_WARNING;
+    return CMD_WARNING_CONFIG_FAILED;
 
   str = vector_slot (Vrip_passive_nondefault, i);
   free (str);
@@ -1232,9 +1233,9 @@ DEFUN (rip_network,
 
   if (ret < 0)
     {
-      vty_out (vty, "There is a same network configuration %s%s", argv[idx_ipv4_word]->arg,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "There is a same network configuration %s\n",
+                 argv[idx_ipv4_word]->arg);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   return CMD_SUCCESS;
@@ -1262,9 +1263,9 @@ DEFUN (no_rip_network,
 
   if (ret < 0)
     {
-      vty_out (vty, "Can't find network configuration %s%s", argv[idx_ipv4_word]->arg,
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Can't find network configuration %s\n",
+                 argv[idx_ipv4_word]->arg);
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   return CMD_SUCCESS;
@@ -1285,8 +1286,8 @@ DEFUN (rip_neighbor,
 
   if (ret <= 0)
     {
-      vty_out (vty, "Please specify address by A.B.C.D%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Please specify address by A.B.C.D\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rip_neighbor_add (&p);
@@ -1310,8 +1311,8 @@ DEFUN (no_rip_neighbor,
 
   if (ret <= 0)
     {
-      vty_out (vty, "Please specify address by A.B.C.D%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Please specify address by A.B.C.D\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   rip_neighbor_delete (&p);
@@ -1326,8 +1327,7 @@ DEFUN (ip_rip_receive_version,
        "Routing Information Protocol\n"
        "Advertisement reception\n"
        "Version control\n"
-       "RIP version 1\n"
-       "RIP version 2\n"
+       "RIP version\n"
        "None\n")
 {
   VTY_DECLVAR_CONTEXT(interface, ifp);
@@ -1351,36 +1351,18 @@ DEFUN (ip_rip_receive_version,
       break;
     }
 
-  return CMD_WARNING;
+  return CMD_WARNING_CONFIG_FAILED;
 }
 
 DEFUN (ip_rip_receive_version_1,
        ip_rip_receive_version_1_cmd,
-       "ip rip receive version (1-1) (2-2)",
+       "ip rip receive version <1 2|2 1>",
        IP_STR
        "Routing Information Protocol\n"
        "Advertisement reception\n"
        "Version control\n"
        "RIP version 1\n"
-       "RIP version 2\n")
-{
-  VTY_DECLVAR_CONTEXT(interface, ifp);
-  struct rip_interface *ri;
-
-  ri = ifp->info;
-
-  /* Version 1 and 2. */
-  ri->ri_receive = RI_RIP_VERSION_1_AND_2;
-  return CMD_SUCCESS;
-}
-
-DEFUN (ip_rip_receive_version_2,
-       ip_rip_receive_version_2_cmd,
-       "ip rip receive version (2-2) (1-1)",
-       IP_STR
-       "Routing Information Protocol\n"
-       "Advertisement reception\n"
-       "Version control\n"
+       "RIP version 2\n"
        "RIP version 2\n"
        "RIP version 1\n")
 {
@@ -1402,8 +1384,7 @@ DEFUN (no_ip_rip_receive_version,
        "Routing Information Protocol\n"
        "Advertisement reception\n"
        "Version control\n"
-       "Version 1\n"
-       "Version 2\n")
+       "RIP version\n")
 {
   VTY_DECLVAR_CONTEXT(interface, ifp);
   struct rip_interface *ri;
@@ -1422,8 +1403,7 @@ DEFUN (ip_rip_send_version,
        "Routing Information Protocol\n"
        "Advertisement transmission\n"
        "Version control\n"
-       "RIP version 1\n"
-       "RIP version 2\n")
+       "RIP version\n")
 {
   VTY_DECLVAR_CONTEXT(interface, ifp);
   int idx_type = 4;
@@ -1442,36 +1422,18 @@ DEFUN (ip_rip_send_version,
       ri->ri_send = RI_RIP_VERSION_2;
       return CMD_SUCCESS;
     }
-  return CMD_WARNING;
+  return CMD_WARNING_CONFIG_FAILED;
 }
 
 DEFUN (ip_rip_send_version_1,
        ip_rip_send_version_1_cmd,
-       "ip rip send version (1-1) (2-2)",
+       "ip rip send version <1 2|2 1>",
        IP_STR
        "Routing Information Protocol\n"
        "Advertisement transmission\n"
        "Version control\n"
        "RIP version 1\n"
-       "RIP version 2\n")
-{
-  VTY_DECLVAR_CONTEXT(interface, ifp);
-  struct rip_interface *ri;
-
-  ri = ifp->info;
-
-  /* Version 1 and 2. */
-  ri->ri_send = RI_RIP_VERSION_1_AND_2;
-  return CMD_SUCCESS;
-}
-
-DEFUN (ip_rip_send_version_2,
-       ip_rip_send_version_2_cmd,
-       "ip rip send version (2-2) (1-1)",
-       IP_STR
-       "Routing Information Protocol\n"
-       "Advertisement transmission\n"
-       "Version control\n"
+       "RIP version 2\n"
        "RIP version 2\n"
        "RIP version 1\n")
 {
@@ -1493,8 +1455,7 @@ DEFUN (no_ip_rip_send_version,
        "Routing Information Protocol\n"
        "Advertisement transmission\n"
        "Version control\n"
-       "Version 1\n"
-       "Version 2\n")
+       "RIP version\n")
 {
   VTY_DECLVAR_CONTEXT(interface, ifp);
   struct rip_interface *ri;
@@ -1573,8 +1534,8 @@ DEFUN (ip_rip_authentication_mode,
   {
     if (auth_type != RIP_AUTH_MD5)
     {
-      vty_out (vty, "auth length argument only valid for md5%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "auth length argument only valid for md5\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
     if (strmatch ("rfc", authlen))
       ri->md5_auth_len = RIP_AUTH_MD5_SIZE;
@@ -1630,15 +1591,15 @@ DEFUN (ip_rip_authentication_string,
 
   if (strlen (argv[idx_line]->arg) > 16)
     {
-      vty_out (vty, "%% RIPv2 authentication string must be shorter than 16%s",
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty,
+                 "%% RIPv2 authentication string must be shorter than 16\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ri->key_chain)
     {
-      vty_out (vty, "%% key-chain configuration exists%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "%% key-chain configuration exists\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ri->auth_str)
@@ -1690,9 +1651,8 @@ DEFUN (ip_rip_authentication_key_chain,
 
   if (ri->auth_str)
     {
-      vty_out (vty, "%% authentication string configuration exists%s",
-	       VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty,"%% authentication string configuration exists\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   if (ri->key_chain)
@@ -1877,48 +1837,43 @@ rip_interface_config_write (struct vty *vty)
           (!ri->key_chain)                                 )
         continue;
 
-      vty_out (vty, "interface %s%s", ifp->name,
-	       VTY_NEWLINE);
+      vty_out (vty, "interface %s\n",ifp->name);
 
       if (ifp->desc)
-	vty_out (vty, " description %s%s", ifp->desc,
-		 VTY_NEWLINE);
+	vty_out (vty, " description %s\n",ifp->desc);
 
       /* Split horizon. */
       if (ri->split_horizon != ri->split_horizon_default)
 	{
           switch (ri->split_horizon) {
           case RIP_SPLIT_HORIZON:
-            vty_out (vty, " ip rip split-horizon%s", VTY_NEWLINE);
+            vty_out (vty, " ip rip split-horizon\n");
             break;
           case RIP_SPLIT_HORIZON_POISONED_REVERSE:
-            vty_out (vty, " ip rip split-horizon poisoned-reverse%s",
-                          VTY_NEWLINE);
+            vty_out (vty," ip rip split-horizon poisoned-reverse\n");
             break;
           case RIP_NO_SPLIT_HORIZON:
           default:
-            vty_out (vty, " no ip rip split-horizon%s", VTY_NEWLINE);
+            vty_out (vty, " no ip rip split-horizon\n");
             break;
           }
 	}
 
       /* RIP version setting. */
       if (ri->ri_send != RI_RIP_UNSPEC)
-	vty_out (vty, " ip rip send version %s%s",
-		 lookup (ri_version_msg, ri->ri_send),
-		 VTY_NEWLINE);
+	vty_out (vty, " ip rip send version %s\n",
+		   lookup_msg(ri_version_msg, ri->ri_send, NULL));
 
       if (ri->ri_receive != RI_RIP_UNSPEC)
-	vty_out (vty, " ip rip receive version %s%s",
-		 lookup (ri_version_msg, ri->ri_receive),
-		 VTY_NEWLINE);
+	vty_out (vty, " ip rip receive version %s \n",
+		   lookup_msg(ri_version_msg, ri->ri_receive, NULL));
 
       if (ri->v2_broadcast)
-	vty_out (vty, " ip rip v2-broadcast%s", VTY_NEWLINE);
+	vty_out (vty, " ip rip v2-broadcast\n");
 
       /* RIP authentication. */
       if (ri->auth_type == RIP_AUTH_SIMPLE_PASSWORD)
-	vty_out (vty, " ip rip authentication mode text%s", VTY_NEWLINE);
+	vty_out (vty, " ip rip authentication mode text\n");
 
       if (ri->auth_type == RIP_AUTH_MD5)
         {
@@ -1927,18 +1882,18 @@ rip_interface_config_write (struct vty *vty)
             vty_out (vty, " auth-length old-ripd");
           else 
             vty_out (vty, " auth-length rfc");
-          vty_out (vty, "%s", VTY_NEWLINE);
+          vty_out (vty, "\n");
         }
 
       if (ri->auth_str)
-	vty_out (vty, " ip rip authentication string %s%s",
-		 ri->auth_str, VTY_NEWLINE);
+	vty_out (vty, " ip rip authentication string %s\n",
+		 ri->auth_str);
 
       if (ri->key_chain)
-	vty_out (vty, " ip rip authentication key-chain %s%s",
-		 ri->key_chain, VTY_NEWLINE);
+	vty_out (vty, " ip rip authentication key-chain %s\n",
+		 ri->key_chain);
 
-      vty_out (vty, "!%s", VTY_NEWLINE);
+      vty_out (vty, "!\n");
     }
   return 0;
 }
@@ -1953,36 +1908,33 @@ config_write_rip_network (struct vty *vty, int config_mode)
   /* Network type RIP enable interface statement. */
   for (node = route_top (rip_enable_network); node; node = route_next (node))
     if (node->info)
-      vty_out (vty, "%s%s/%d%s", 
+      vty_out (vty, "%s%s/%d\n", 
 	       config_mode ? " network " : "    ",
 	       inet_ntoa (node->p.u.prefix4),
-	       node->p.prefixlen,
-	       VTY_NEWLINE);
+	       node->p.prefixlen);
 
   /* Interface name RIP enable statement. */
   for (i = 0; i < vector_active (rip_enable_interface); i++)
     if ((ifname = vector_slot (rip_enable_interface, i)) != NULL)
-      vty_out (vty, "%s%s%s",
+      vty_out (vty, "%s%s\n",
 	       config_mode ? " network " : "    ",
-	       ifname,
-	       VTY_NEWLINE);
+	       ifname);
 
   /* RIP neighbors listing. */
   for (node = route_top (rip->neighbor); node; node = route_next (node))
     if (node->info)
-      vty_out (vty, "%s%s%s", 
+      vty_out (vty, "%s%s\n", 
 	       config_mode ? " neighbor " : "    ",
-	       inet_ntoa (node->p.u.prefix4),
-	       VTY_NEWLINE);
+	       inet_ntoa(node->p.u.prefix4));
 
   /* RIP passive interface listing. */
   if (config_mode) {
     if (passive_default)
-      vty_out (vty, " passive-interface default%s", VTY_NEWLINE);
+      vty_out (vty, " passive-interface default\n");
     for (i = 0; i < vector_active (Vrip_passive_nondefault); i++)
       if ((ifname = vector_slot (Vrip_passive_nondefault, i)) != NULL)
-	vty_out (vty, " %spassive-interface %s%s",
-		 (passive_default ? "no " : ""), ifname, VTY_NEWLINE);
+	vty_out (vty, " %spassive-interface %s\n",
+		 (passive_default ? "no " : ""), ifname);
   }
 
   return 0;
@@ -2042,12 +1994,10 @@ rip_if_init (void)
 
   install_element (INTERFACE_NODE, &ip_rip_send_version_cmd);
   install_element (INTERFACE_NODE, &ip_rip_send_version_1_cmd);
-  install_element (INTERFACE_NODE, &ip_rip_send_version_2_cmd);
   install_element (INTERFACE_NODE, &no_ip_rip_send_version_cmd);
 
   install_element (INTERFACE_NODE, &ip_rip_receive_version_cmd);
   install_element (INTERFACE_NODE, &ip_rip_receive_version_1_cmd);
-  install_element (INTERFACE_NODE, &ip_rip_receive_version_2_cmd);
   install_element (INTERFACE_NODE, &no_ip_rip_receive_version_cmd);
 
   install_element (INTERFACE_NODE, &ip_rip_v2_broadcast_cmd);

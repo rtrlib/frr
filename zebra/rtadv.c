@@ -877,8 +877,9 @@ DEFUN (ipv6_nd_suppress_ra,
   if (if_is_loopback (ifp) ||
       CHECK_FLAG(ifp->status, ZEBRA_INTERFACE_VRF_LOOPBACK))
     {
-      vty_out (vty, "Cannot configure IPv6 Router Advertisements on this  interface%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty,
+                 "Cannot configure IPv6 Router Advertisements on this  interface\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   ipv6_nd_suppress_ra_set (ifp, RA_SUPPRESS);
@@ -900,8 +901,9 @@ DEFUN (no_ipv6_nd_suppress_ra,
   if (if_is_loopback (ifp) ||
       CHECK_FLAG(ifp->status, ZEBRA_INTERFACE_VRF_LOOPBACK))
     {
-      vty_out (vty, "Cannot configure IPv6 Router Advertisements on this interface%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty,
+                 "Cannot configure IPv6 Router Advertisements on this interface\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   ipv6_nd_suppress_ra_set (ifp, RA_ENABLE);
@@ -926,11 +928,12 @@ DEFUN (ipv6_nd_ra_interval_msec,
   struct zebra_ns *zns;
 
   zns = zvrf->zns;
-  VTY_GET_INTEGER_RANGE ("router advertisement interval", interval, argv[idx_number]->arg, 70, 1800000);
+  interval = strtoul(argv[idx_number]->arg, NULL, 10);
   if ((zif->rtadv.AdvDefaultLifetime != -1 && interval > (unsigned)zif->rtadv.AdvDefaultLifetime * 1000))
   {
-    vty_out (vty, "This ra-interval would conflict with configured ra-lifetime!%s", VTY_NEWLINE);
-    return CMD_WARNING;
+    vty_out (vty,
+               "This ra-interval would conflict with configured ra-lifetime!\n");
+    return CMD_WARNING_CONFIG_FAILED;
   }
 
   if (zif->rtadv.MaxRtrAdvInterval % 1000)
@@ -962,11 +965,12 @@ DEFUN (ipv6_nd_ra_interval,
   struct zebra_ns *zns;
 
   zns = zvrf->zns;
-  VTY_GET_INTEGER_RANGE ("router advertisement interval", interval, argv[idx_number]->arg, 1, 1800);
+  interval = strtoul(argv[idx_number]->arg, NULL, 10);
   if ((zif->rtadv.AdvDefaultLifetime != -1 && interval > (unsigned)zif->rtadv.AdvDefaultLifetime))
   {
-    vty_out (vty, "This ra-interval would conflict with configured ra-lifetime!%s", VTY_NEWLINE);
-    return CMD_WARNING;
+    vty_out (vty,
+               "This ra-interval would conflict with configured ra-lifetime!\n");
+    return CMD_WARNING_CONFIG_FAILED;
   }
 
   if (zif->rtadv.MaxRtrAdvInterval % 1000)
@@ -1024,7 +1028,7 @@ DEFUN (ipv6_nd_ra_lifetime,
   struct zebra_if *zif = ifp->info;
   int lifetime;
 
-  VTY_GET_INTEGER_RANGE ("router lifetime", lifetime, argv[idx_number]->arg, 0, 9000);
+  lifetime = strtoul(argv[idx_number]->arg, NULL, 10);
 
   /* The value to be placed in the Router Lifetime field
    * of Router Advertisements sent from the interface,
@@ -1032,8 +1036,9 @@ DEFUN (ipv6_nd_ra_lifetime,
    * MaxRtrAdvInterval and 9000 seconds. -- RFC4861, 6.2.1 */
   if ((lifetime != 0 && lifetime * 1000 < zif->rtadv.MaxRtrAdvInterval))
     {
-      vty_out (vty, "This ra-lifetime would conflict with configured ra-interval%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty,
+                 "This ra-lifetime would conflict with configured ra-interval\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   zif->rtadv.AdvDefaultLifetime = lifetime;
@@ -1069,7 +1074,7 @@ DEFUN (ipv6_nd_reachable_time,
   int idx_number = 3;
   VTY_DECLVAR_CONTEXT (interface, ifp);
   struct zebra_if *zif = ifp->info;
-  VTY_GET_INTEGER_RANGE ("reachable time", zif->rtadv.AdvReachableTime, argv[idx_number]->arg, 1, RTADV_MAX_REACHABLE_TIME);
+  zif->rtadv.AdvReachableTime = strtoul(argv[idx_number]->arg, NULL, 10);
   return CMD_SUCCESS;
 }
 
@@ -1101,7 +1106,7 @@ DEFUN (ipv6_nd_homeagent_preference,
   int idx_number = 3;
   VTY_DECLVAR_CONTEXT (interface, ifp);
   struct zebra_if *zif = ifp->info;
-  VTY_GET_INTEGER_RANGE ("home agent preference", zif->rtadv.HomeAgentPreference, argv[idx_number]->arg, 0, 65535);
+  zif->rtadv.HomeAgentPreference = strtoul(argv[idx_number]->arg, NULL, 10);
   return CMD_SUCCESS;
 }
 
@@ -1133,7 +1138,7 @@ DEFUN (ipv6_nd_homeagent_lifetime,
   int idx_number = 3;
   VTY_DECLVAR_CONTEXT (interface, ifp);
   struct zebra_if *zif = ifp->info;
-  VTY_GET_INTEGER_RANGE ("home agent lifetime", zif->rtadv.HomeAgentLifetime, argv[idx_number]->arg, 0, RTADV_MAX_HALIFETIME);
+  zif->rtadv.HomeAgentLifetime = strtoul(argv[idx_number]->arg, NULL, 10);
   return CMD_SUCCESS;
 }
 
@@ -1328,8 +1333,8 @@ DEFUN (ipv6_nd_prefix,
   ret = str2prefix_ipv6 (prefix, &rp.prefix);
   if (!ret)
     {
-      vty_out (vty, "Malformed IPv6 prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed IPv6 prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   apply_mask_ipv6 (&rp.prefix); /* RFC4861 4.6.2 */
   rp.AdvOnLinkFlag = !offlink;
@@ -1344,8 +1349,8 @@ DEFUN (ipv6_nd_prefix,
     rp.AdvPreferredLifetime = strmatch (preflifetime, "infinite") ? UINT32_MAX : strtoll (preflifetime, NULL, 10);
     if (rp.AdvPreferredLifetime > rp.AdvValidLifetime)
       {
-        vty_out (vty, "Invalid preferred lifetime%s", VTY_NEWLINE);
-        return CMD_WARNING;
+        vty_out (vty, "Invalid preferred lifetime\n");
+        return CMD_WARNING_CONFIG_FAILED;
       }
   }
 
@@ -1381,16 +1386,16 @@ DEFUN (no_ipv6_nd_prefix,
   ret = str2prefix_ipv6 (prefix, &rp.prefix);
   if (!ret)
     {
-      vty_out (vty, "Malformed IPv6 prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Malformed IPv6 prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
   apply_mask_ipv6 (&rp.prefix); /* RFC4861 4.6.2 */
 
   ret = rtadv_prefix_reset (zebra_if, &rp);
   if (!ret)
     {
-      vty_out (vty, "Non-existant IPv6 prefix%s", VTY_NEWLINE);
-      return CMD_WARNING;
+      vty_out (vty, "Non-existant IPv6 prefix\n");
+      return CMD_WARNING_CONFIG_FAILED;
     }
 
   return CMD_SUCCESS;
@@ -1403,8 +1408,8 @@ DEFUN (ipv6_nd_router_preference,
        "Neighbor discovery\n"
        "Default router preference\n"
        "High default router preference\n"
-       "Low default router preference\n"
-       "Medium default router preference (default)\n")
+       "Medium default router preference (default)\n"
+       "Low default router preference\n")
 {
   int idx_high_medium_low = 3;
   VTY_DECLVAR_CONTEXT (interface, ifp);
@@ -1454,7 +1459,7 @@ DEFUN (ipv6_nd_mtu,
   int idx_number = 3;
   VTY_DECLVAR_CONTEXT (interface, ifp);
   struct zebra_if *zif = ifp->info;
-  VTY_GET_INTEGER_RANGE ("MTU", zif->rtadv.AdvLinkMTU, argv[idx_number]->arg, 1, 65535);
+  zif->rtadv.AdvLinkMTU = strtoul(argv[idx_number]->arg, NULL, 10);
   return CMD_SUCCESS;
 }
 
@@ -1490,53 +1495,49 @@ rtadv_config_write (struct vty *vty, struct interface *ifp)
         CHECK_FLAG(ifp->status, ZEBRA_INTERFACE_VRF_LOOPBACK)))
     {
       if (zif->rtadv.AdvSendAdvertisements)
-        vty_out (vty, " no ipv6 nd suppress-ra%s", VTY_NEWLINE);
+        vty_out (vty, " no ipv6 nd suppress-ra\n");
     }
   
   interval = zif->rtadv.MaxRtrAdvInterval;
   if (interval % 1000)
-    vty_out (vty, " ipv6 nd ra-interval msec %d%s", interval,
-	     VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd ra-interval msec %d\n",interval);
   else
     if (interval != RTADV_MAX_RTR_ADV_INTERVAL)
-      vty_out (vty, " ipv6 nd ra-interval %d%s", interval / 1000,
-	     VTY_NEWLINE);
+      vty_out (vty, " ipv6 nd ra-interval %d\n",interval / 1000);
 
   if (zif->rtadv.AdvIntervalOption)
-    vty_out (vty, " ipv6 nd adv-interval-option%s", VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd adv-interval-option\n");
 
   if (zif->rtadv.AdvDefaultLifetime != -1)
-    vty_out (vty, " ipv6 nd ra-lifetime %d%s", zif->rtadv.AdvDefaultLifetime,
-	     VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd ra-lifetime %d\n",zif->rtadv.AdvDefaultLifetime);
 
   if (zif->rtadv.HomeAgentPreference)
-    vty_out (vty, " ipv6 nd home-agent-preference %u%s",
-	     zif->rtadv.HomeAgentPreference, VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd home-agent-preference %u\n",
+	     zif->rtadv.HomeAgentPreference);
 
   if (zif->rtadv.HomeAgentLifetime != -1)
-    vty_out (vty, " ipv6 nd home-agent-lifetime %u%s",
-	     zif->rtadv.HomeAgentLifetime, VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd home-agent-lifetime %u\n",
+	     zif->rtadv.HomeAgentLifetime);
 
   if (zif->rtadv.AdvHomeAgentFlag)
-    vty_out (vty, " ipv6 nd home-agent-config-flag%s", VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd home-agent-config-flag\n");
 
   if (zif->rtadv.AdvReachableTime)
-    vty_out (vty, " ipv6 nd reachable-time %d%s", zif->rtadv.AdvReachableTime,
-	     VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd reachable-time %d\n",
+               zif->rtadv.AdvReachableTime);
 
   if (zif->rtadv.AdvManagedFlag)
-    vty_out (vty, " ipv6 nd managed-config-flag%s", VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd managed-config-flag\n");
 
   if (zif->rtadv.AdvOtherConfigFlag)
-    vty_out (vty, " ipv6 nd other-config-flag%s", VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd other-config-flag\n");
 
   if (zif->rtadv.DefaultPreference != RTADV_PREF_MEDIUM)
-    vty_out (vty, " ipv6 nd router-preference %s%s",
-	     rtadv_pref_strs[zif->rtadv.DefaultPreference],
-	     VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd router-preference %s\n",
+	     rtadv_pref_strs[zif->rtadv.DefaultPreference]);
 
   if (zif->rtadv.AdvLinkMTU)
-    vty_out (vty, " ipv6 nd mtu %d%s", zif->rtadv.AdvLinkMTU, VTY_NEWLINE);
+    vty_out (vty, " ipv6 nd mtu %d\n", zif->rtadv.AdvLinkMTU);
 
   for (ALL_LIST_ELEMENTS_RO (zif->rtadv.AdvPrefixList, node, rprefix))
     {
@@ -1560,7 +1561,7 @@ rtadv_config_write (struct vty *vty, struct interface *ifp)
 	vty_out (vty, " no-autoconfig");
       if (rprefix->AdvRouterAddressFlag)
 	vty_out (vty, " router-address");
-      vty_out (vty, "%s", VTY_NEWLINE);
+      vty_out (vty, "\n");
     }
 }
 
