@@ -343,6 +343,7 @@ bgp_rpki_init(void)
   polling_period = POLLING_PERIOD_DEFAULT;
   timeout = TIMEOUT_DEFAULT;
   initial_synchronisation_timeout = INITIAL_SYNCHRONISATION_TIMEOUT_DEFAULT;
+  install_cli_commands();
   rpki_start();
   return 0;
 }
@@ -673,6 +674,67 @@ delete_cache_group(void* _cache_group)
   cache_group* group = _cache_group;
   list_delete(group->cache_config_list);
   XFREE(MTYPE_BGP_RPKI_CACHE_GROUP, group);
+}
+void
+install_cli_commands()
+{
+  cache_group_list = list_new();
+  cache_group_list->del = delete_cache_group;
+  cache_group_list->count = 0;
+
+  install_node(&rpki_node, rpki_config_write);
+  install_default(RPKI_NODE);
+  overwrite_exit_commands();
+  install_element(CONFIG_NODE, &enable_rpki_cmd);
+
+  /* Install rpki polling period commands */
+  install_element(RPKI_NODE, &rpki_polling_period_cmd);
+  install_element(RPKI_NODE, &no_rpki_polling_period_cmd);
+
+  /* Install rpki expire interval commands */
+  install_element(RPKI_NODE, &rpki_expire_interval_cmd);
+  install_element(RPKI_NODE, &no_rpki_expire_interval_cmd);
+
+  /* Install rpki timeout commands */
+  install_element(RPKI_NODE, &rpki_timeout_cmd);
+  install_element(RPKI_NODE, &no_rpki_timeout_cmd);
+
+  /* Install rpki synchronisation timeout commands */
+  install_element(RPKI_NODE, &rpki_synchronisation_timeout_cmd);
+  install_element(RPKI_NODE, &no_rpki_synchronisation_timeout_cmd);
+
+  /* Install rpki group commands */
+  install_element(RPKI_NODE, &rpki_group_cmd);
+  install_element(RPKI_NODE, &no_rpki_group_cmd);
+
+  /* Install rpki cache commands */
+  install_element(RPKI_NODE, &rpki_cache_cmd);
+  install_element(RPKI_NODE, &no_rpki_cache_cmd);
+
+  /* Install prefix_validate disable commands */
+  install_element(BGP_NODE, &bgp_bestpath_prefix_validate_disable_cmd);
+  install_element(BGP_NODE, &no_bgp_bestpath_prefix_validate_disable_cmd);
+
+  /* Install prefix_validate allow_invalid commands */
+  install_element(BGP_NODE, &bgp_bestpath_prefix_validate_allow_invalid_cmd);
+  install_element(BGP_NODE, &no_bgp_bestpath_prefix_validate_allow_invalid_cmd);
+
+  /* Install show commands */
+  install_element(VIEW_NODE, &show_rpki_prefix_table_cmd);
+  install_element(VIEW_NODE, &show_rpki_cache_connection_cmd);
+  install_element(RESTRICTED_NODE, &show_rpki_prefix_table_cmd);
+  install_element(RESTRICTED_NODE, &show_rpki_cache_connection_cmd);
+  install_element(ENABLE_NODE, &show_rpki_prefix_table_cmd);
+  install_element(ENABLE_NODE, &show_rpki_cache_connection_cmd);
+
+  /* Install debug commands */
+  install_element(CONFIG_NODE, &debug_rpki_cmd);
+  install_element(ENABLE_NODE, &debug_rpki_cmd);
+  install_element(CONFIG_NODE, &no_debug_rpki_cmd);
+  install_element(ENABLE_NODE, &no_debug_rpki_cmd);
+
+  /* Install route match */
+  route_map_install_match(&route_match_rpki_cmd);
 }
 FRR_MODULE_SETUP(
         .name = "bgpd_rpki",
