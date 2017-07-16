@@ -76,6 +76,8 @@ extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t 
 /** Declaration of private functions    **/
 /*****************************************/
 void free_rtr_mgr_groups(struct rtr_mgr_group* group, int length);
+struct rtr_mgr_group* get_rtr_mgr_groups(void);
+
 //static void list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* count);
 //static void print_record(struct vty *vty, const struct trie_node* node);
 //static void update_cb(struct pfx_table* p, const struct pfx_record rec, const bool added);
@@ -140,6 +142,7 @@ free_rtr_mgr_groups(struct rtr_mgr_group* group, int length)
   XFREE(MTYPE_BGP_RPKI_CACHE_GROUP, group);
 }
 
+struct rtr_mgr_group*
 get_rtr_mgr_groups()
 {
   struct listnode *cache_group_node;
