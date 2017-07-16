@@ -65,8 +65,8 @@ unsigned int initial_synchronisation_timeout;
 /**********************************/
 void rpki_start(void);
 void rpki_reset_session(void);
-static int rpki_init(void);
-static int rpki_module_init(void);
+static int bgp_rpki_init(void);
+static int bgp_rpki_module_init(void);
 void rpki_finish(void);
 int rpki_is_synchronized(void);
 int rpki_is_running(void);

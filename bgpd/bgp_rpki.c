@@ -67,11 +67,36 @@ typedef struct node_data_t
   data_elem* ary;
 } node_data;
 
+typedef struct
+{
+  struct list* cache_config_list;
+  int preference_value;
+  char delete_flag;
+} cache_group;
+
+typedef struct
+{
+  enum
+  {
+    TCP, SSH
+  } type;
+
+  union
+  {
+    struct tr_tcp_config* tcp_config;
+    struct tr_ssh_config* ssh_config;
+  } tr_config;
+
+  struct rtr_socket* rtr_socket;
+  char delete_flag;
+} cache;
 /*******************************************/
 /** Declaration of externernal functions  **/
 /*******************************************/
 extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t safi);
-
+static void delete_marked_cache_groups(void);
+static void delete_cache(void* value);
+static void delete_cache_group(void* _cache_group);
 /*****************************************/
 /** Declaration of private functions    **/
 /*****************************************/
@@ -576,6 +601,64 @@ rpki_revalidate_all_routes(struct bgp* bgp, afi_t afi)
     }
 }
 
+static void
+delete_marked_cache_groups()
+{
+  cache_group* cache_group;
+  cache* cache;
+  struct listnode *cache_group_node, *cache_node;
+  struct listnode *next_node, *next_cache_node;
+  for (ALL_LIST_ELEMENTS(cache_group_list, cache_group_node, next_node,
+      cache_group))
+    {
+      for (ALL_LIST_ELEMENTS(cache_group->cache_config_list, cache_node,
+          next_cache_node, cache))
+        {
+          if (cache->delete_flag)
+            {
+              listnode_delete(cache_group->cache_config_list, cache);
+              delete_cache(cache);
+            }
+        }
+      if (listcount(cache_group->cache_config_list) == 0
+          || cache_group->delete_flag)
+        {
+          listnode_delete(cache_group_list, cache_group);
+          delete_cache_group(cache_group);
+        }
+    }
+}
+static void
+delete_cache(void* value)
+{
+  cache* cache_p = (cache*) value;
+  if (cache_p->type == TCP)
+    {
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.tcp_config->host);
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.tcp_config->port);
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.tcp_config);
+    }
+  else
+    {
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config->host);
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config->username);
+      XFREE(MTYPE_BGP_RPKI_CACHE,
+          cache_p->tr_config.ssh_config->client_privkey_path);
+      XFREE(MTYPE_BGP_RPKI_CACHE,
+          cache_p->tr_config.ssh_config->server_hostkey_path);
+      XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->tr_config.ssh_config);
+    }
+  XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->rtr_socket->tr_socket);
+  XFREE(MTYPE_BGP_RPKI_CACHE, cache_p->rtr_socket);
+  XFREE(MTYPE_BGP_RPKI_CACHE, cache_p);
+}
+static void
+delete_cache_group(void* _cache_group)
+{
+  cache_group* group = _cache_group;
+  list_delete(group->cache_config_list);
+  XFREE(MTYPE_BGP_RPKI_CACHE_GROUP, group);
+}
 FRR_MODULE_SETUP(
         .name = "bgpd_rpki",
         .version = "0.3.6",
