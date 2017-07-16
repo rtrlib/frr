@@ -75,6 +75,7 @@ extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t 
 /*****************************************/
 /** Declaration of private functions    **/
 /*****************************************/
+void free_rtr_mgr_groups(struct rtr_mgr_group* group, int length);
 //static void list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* count);
 //static void print_record(struct vty *vty, const struct trie_node* node);
 //static void update_cb(struct pfx_table* p, const struct pfx_record rec, const bool added);
@@ -123,6 +124,77 @@ list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* coun
     {
       list_all_nodes(vty, node->rchild, count);
     }
+}
+
+void
+free_rtr_mgr_groups(struct rtr_mgr_group* group, int length)
+{
+  int i;
+  struct rtr_mgr_group* group_temp = group;
+  for (i = 0; i < length; ++i)
+  {
+    XFREE(MTYPE_BGP_RPKI_CACHE, group_temp->sockets);
+    group_temp++;
+  }
+
+  XFREE(MTYPE_BGP_RPKI_CACHE_GROUP, group);
+}
+
+get_rtr_mgr_groups()
+{
+  struct listnode *cache_group_node;
+  cache_group* cache_group;
+  struct rtr_mgr_group* rtr_mgr_groups;
+  struct rtr_mgr_group* loop_group_pointer;
+
+  delete_marked_cache_groups();
+  int number_of_groups = listcount(cache_group_list);
+  if (number_of_groups == 0)
+  {
+    return NULL ;
+  }
+
+  if ((rtr_mgr_groups = XMALLOC(MTYPE_BGP_RPKI_CACHE_GROUP,
+    number_of_groups * sizeof(struct rtr_mgr_group))) == NULL )
+  {
+    return NULL ;
+  }
+  loop_group_pointer = rtr_mgr_groups;
+
+  for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group))
+  {
+    struct list* cache_list = cache_group->cache_config_list;
+    struct listnode* cache_node;
+    cache* cache;
+    struct rtr_socket** loop_cache_pointer;
+    int number_of_caches = listcount(cache_list);
+    if (number_of_caches == 0)
+      {
+        break;
+      }
+    if ((loop_group_pointer->sockets = XMALLOC(MTYPE_BGP_RPKI_CACHE,
+        number_of_caches * sizeof(struct rtr_socket*))) == NULL )
+      {
+        return NULL ;
+      }
+    loop_cache_pointer = loop_group_pointer->sockets;
+
+    for (ALL_LIST_ELEMENTS_RO(cache_list, cache_node, cache))
+      {
+        *loop_cache_pointer = cache->rtr_socket;
+        loop_cache_pointer++;
+      }
+    loop_group_pointer->sockets_len = number_of_caches;
+    loop_group_pointer->preference = cache_group->preference_value;
+    loop_group_pointer++;
+  }
+
+  if (loop_group_pointer == rtr_mgr_groups)
+  {
+    // No caches were found in config file
+    return NULL ;
+  }
+  return rtr_mgr_groups;
 }
 
 inline void
@@ -224,11 +296,11 @@ static int
 bgp_rpki_init(void)
 {
   rpki_debug = 0;
-  install_cli_commands();
   rtr_is_running = 0;
   polling_period = POLLING_PERIOD_DEFAULT;
   timeout = TIMEOUT_DEFAULT;
   initial_synchronisation_timeout = INITIAL_SYNCHRONISATION_TIMEOUT_DEFAULT;
+  rpki_start();
   return 0;
 }
 
