@@ -114,11 +114,14 @@ bgpd_snmp_la_CFLAGS = $(WERROR) $(SNMP_CFLAGS)
 bgpd_snmp_la_LDFLAGS = -avoid-version -module -shared -export-dynamic
 bgpd_snmp_la_LIBADD = ../lib/libfrrsnmp.la
 
+if RPKI
 module_LTLIBRARIES += bgpd_rpki.la
+endif
 
 bgpd_rpki_la_SOURCES = bgp_rpki.c
-bgpd_rpki_la_CFLAGS = $(WERROR) $(SNMP_CFLAGS)
+bgpd_rpki_la_CFLAGS = $(WERROR) $(RTRLIB_CFLAGS)
 bgpd_rpki_la_LDFLAGS = -avoid-version -module -shared -export-dynamic
+bgpd_rpki_la_LIBADD = $(RTRLIB_LIBS)
 
 examplesdir = $(exampledir)
 dist_examples_DATA = bgpd.conf.sample bgpd.conf.sample2 \
