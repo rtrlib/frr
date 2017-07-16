@@ -124,6 +124,9 @@ bgpd_rpki_la_CFLAGS = $(WERROR) $(RTRLIB_CFLAGS)
 bgpd_rpki_la_LDFLAGS = -avoid-version -module -shared -export-dynamic
 bgpd_rpki_la_LIBADD = $(RTRLIB_LIBS)
 
+bgpd_rpki_la-bgp_rpki.o: bgp_rpki_clippy.c
+bgp_rpki.o: bgp_rpki_clippy.c
+
 examplesdir = $(exampledir)
 dist_examples_DATA = bgpd.conf.sample bgpd.conf.sample2 \
 	bgpd.conf.vnc.sample

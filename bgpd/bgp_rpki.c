@@ -45,6 +45,9 @@
 #include "version.h"
 
 #define RPKI_OUTPUT_STRING "Control rpki specific settings\n"
+
+#include "bgp_rpki_clippy.c"
+
 /**********************************/
 /** Declaration of variables     **/
 /**********************************/
@@ -997,18 +1000,14 @@ DEFUN (rpki,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_polling_period,
+DEFPY (rpki_polling_period,
     rpki_polling_period_cmd,
-    "rpki polling_period " CMD_POLLING_PERIOD_RANGE,
+    "rpki polling_period (1-86400)$pp",
     RPKI_OUTPUT_STRING
     "Set polling period\n"
     "Polling period value\n")
 {
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  VTY_GET_INTEGER_RANGE("polling_period", polling_period, argv[2]->arg, 1, 86400);
+  polling_period = pp;
   return CMD_SUCCESS;
 }
 
@@ -1023,24 +1022,19 @@ DEFUN (no_rpki_polling_period,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_expire_interval,
+DEFPY (rpki_expire_interval,
     rpki_expire_interval_cmd,
-    "rpki expire_interval " CMD_EXPIRE_INTERVAL_RANGE,
+    "rpki expire_interval (600-172800)$tmp",
     RPKI_OUTPUT_STRING
     "Set expire interval\n"
     "Expire interval value\n")
 {
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  unsigned int tmp;
-  VTY_GET_INTEGER_RANGE("expire_interval", tmp, argv[2]->arg, 600, 172800);
   if (tmp >= polling_period){
       expire_interval = tmp;
       return CMD_SUCCESS;
   } else {
-      return CMD_ERR_NO_MATCH;
+      vty_out(vty, "%% Expiry interval must be polling period or larger\n");
+      return CMD_WARNING_CONFIG_FAILED;
   }
 }
 
@@ -1055,18 +1049,14 @@ DEFUN (no_rpki_expire_interval,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_timeout,
+DEFPY (rpki_timeout,
     rpki_timeout_cmd,
-    "rpki timeout TIMEOUT",
+    "rpki timeout (1-4294967295)$to_arg",
     RPKI_OUTPUT_STRING
     "Set timeout\n"
     "Timeout value\n")
 {
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  VTY_GET_INTEGER("timeout", timeout, argv[2]->arg);
+  timeout = to_arg;
   return CMD_SUCCESS;
 }
 
@@ -1081,18 +1071,14 @@ DEFUN (no_rpki_timeout,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_synchronisation_timeout,
+DEFPY (rpki_synchronisation_timeout,
     rpki_synchronisation_timeout_cmd,
-    "rpki initial-synchronisation-timeout TIMEOUT",
+    "rpki initial-synchronisation-timeout (1-4294967295)$ito_arg",
     RPKI_OUTPUT_STRING
     "Set a timeout for the initial synchronisation of prefix validation data\n"
     "Timeout value\n")
 {
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  VTY_GET_INTEGER("timeout", initial_synchronisation_timeout, argv[2]->arg);
+  initial_synchronisation_timeout = ito_arg;
   return CMD_SUCCESS;
 }
 
@@ -1107,27 +1093,21 @@ DEFUN (no_rpki_synchronisation_timeout,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_group,
+DEFPY (rpki_group,
     rpki_group_cmd,
     "rpki group (0-4294967295)",
     RPKI_OUTPUT_STRING
     "Select an existing or start a new group of cache servers\n"
     "Preference Value for this group (lower value means higher preference)\n")
 {
-  int group_preference;
   cache_group* new_cache_group;
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  VTY_GET_INTEGER("group preference", group_preference, argv[2]->arg);
-  // Select group for further configuration
-  currently_selected_cache_group = find_cache_group(group_preference);
-  
+
+  currently_selected_cache_group = find_cache_group(group);
+
   // Group does not yet exist so create new one
   if (currently_selected_cache_group == NULL )
     {
-      if ((new_cache_group = create_cache_group(group_preference)) == NULL )
+      if ((new_cache_group = create_cache_group(group)) == NULL )
         {
           vty_out(vty, "Could not create new rpki cache group because "
               "of memory allocation error\n");
@@ -1139,7 +1119,7 @@ DEFUN (rpki_group,
   return CMD_SUCCESS;
 }
 
-DEFUN (no_rpki_group,
+DEFPY (no_rpki_group,
     no_rpki_group_cmd,
     "no rpki group (0-4294967295)",
     NO_STR
@@ -1147,18 +1127,12 @@ DEFUN (no_rpki_group,
     "Remove a group of cache servers\n"
     "Preference Value for this group (lower value means higher preference)\n")
 {
-  int group_preference;
   cache_group* cache_group;
-  if (argc != 3)
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
-  VTY_GET_INTEGER("group preference", group_preference, argv[2]->arg);
-  cache_group = find_cache_group(group_preference);
+  cache_group = find_cache_group(group);
   if (cache_group == NULL )
     {
-      vty_out(vty, "There is no cache group with preference value %d\n",
-          group_preference);
+      vty_out(vty, "There is no cache group with preference value %ld\n",
+          group);
       return CMD_WARNING;
     }
   cache_group->delete_flag = 1;
@@ -1166,13 +1140,15 @@ DEFUN (no_rpki_group,
   return CMD_SUCCESS;
 }
 
-DEFUN (rpki_cache,
+DEFPY (rpki_cache,
     rpki_cache_cmd,
-    "rpki cache <A.B.C.D|WORD> PORT [SSH_UNAME SSH_PRIVKEY SSH_PUBKEY [SERVER_PUBKEY]]",
+    "rpki cache <A.B.C.D|WORD> "
+      "<TCPPORT|(1-65535)$sshport SSH_UNAME SSH_PRIVKEY SSH_PUBKEY [SERVER_PUBKEY]>",
     RPKI_OUTPUT_STRING
     "Install a cache server to current group\n"
     "IP address of cache server\n Hostname of cache server\n"
-    "Tcp port number \n"
+    "TCP port number \n"
+    "SSH port number \n"
     "SSH user name \n"
     "Path to own SSH private key \n"
     "Path to own SSH public key \n"
@@ -1183,42 +1159,29 @@ DEFUN (rpki_cache,
     {
       vty_out(vty, "Cannot create new rpki cache because "
           "no cache group is defined.\n");
-      return CMD_WARNING;
+      return CMD_WARNING_CONFIG_FAILED;
     }
   if (currently_selected_cache_group == NULL )
     {
       vty_out(vty, "No cache group is selected\n");
       return CMD_WARNING;
     }
+
   // use ssh connection
-  if (argc == 7)
+  if (ssh_uname)
     {
-      int port;
-      VTY_GET_INTEGER("rpki cache ssh port", port, argv[3]->arg);
       return_value = add_ssh_cache(
-          currently_selected_cache_group->cache_config_list, argv[2]->arg, port,
-          argv[4]->arg, argv[5]->arg, argv[6]->arg, NULL );
-    }
-  else if (argc == 8)
-    {
-      unsigned int port;
-      VTY_GET_INTEGER("rpki cache ssh port", port, argv[3]->arg);
-      return_value = add_ssh_cache(
-          currently_selected_cache_group->cache_config_list, argv[2]->arg, port,
-          argv[4]->arg, argv[5]->arg, argv[6]->arg, argv[7]->arg);
+          currently_selected_cache_group->cache_config_list,
+          cache, sshport, ssh_uname, ssh_privkey, ssh_pubkey, server_pubkey);
     }
   // use tcp connection
-  else if (argc == 4)
-    {
-      return_value = add_tcp_cache(
-          currently_selected_cache_group->cache_config_list, argv[2]->arg, argv[3]->arg);
-      vty_out(vty, "TEMPORARY RPKI DBUGMSG: Added TCP cache to group\n");
-    }
   else
     {
-      vty_out(vty, "Could not read incomplete command\n");
-      return CMD_ERR_INCOMPLETE;
+      return_value = add_tcp_cache(
+          currently_selected_cache_group->cache_config_list, cache, tcpport);
+      vty_out(vty, "TEMPORARY RPKI DBUGMSG: Added TCP cache to group\n");
     }
+
   if (return_value == ERROR)
     {
       vty_out(vty, "Could not create new rpki cache because "
@@ -1228,9 +1191,9 @@ DEFUN (rpki_cache,
   return CMD_SUCCESS;
 }
 
-DEFUN (no_rpki_cache,
+DEFPY (no_rpki_cache,
     no_rpki_cache_cmd,
-    "no rpki cache <A.B.C.D|WORD> [PORT]",
+    "no rpki cache <A.B.C.D|WORD>$cachename [PORT]",
     NO_STR
     RPKI_OUTPUT_STRING
     "Remove a cache server from current group\n"
@@ -1247,28 +1210,13 @@ DEFUN (no_rpki_cache,
       vty_out(vty, "No cache group is selected\n");
       return CMD_WARNING;
     }
-  if (argc == 2)
-    {
-      unsigned int port;
-      VTY_GET_INTEGER("rpki cache port", port, argv[4]->arg);
-      const unsigned int const_port = port;
-      cache = find_cache(currently_selected_cache_group->cache_config_list,
-          argv[3]->arg, argv[4]->arg, const_port);
+  unsigned portnum = port ? atoi(port) : 0;
+  cache = find_cache(currently_selected_cache_group->cache_config_list,
+      cachename, port, portnum);
 
-    }
-  else if (argc == 1)
-    {
-      cache = find_cache(currently_selected_cache_group->cache_config_list,
-          argv[3]->arg, NULL, 0);
-
-    }
-  else
-    {
-      return CMD_ERR_INCOMPLETE;
-    }
   if (cache == NULL )
     {
-      vty_out(vty, "Cannot find cache %s\n", argv[3]->arg);
+      vty_out(vty, "Cannot find cache %s\n", cachename);
       return CMD_WARNING;
     }
   cache->delete_flag = 1;
