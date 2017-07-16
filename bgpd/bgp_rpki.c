@@ -90,6 +90,8 @@ typedef struct
   struct rtr_socket* rtr_socket;
   char delete_flag;
 } cache;
+
+struct cmd_node rpki_node = { RPKI_NODE, "%s(config-rpki)# ", 1, NULL, NULL };
 /*******************************************/
 /** Declaration of externernal functions  **/
 /*******************************************/
@@ -97,6 +99,9 @@ extern void bgp_process(struct bgp *bgp, struct bgp_node *rn, afi_t afi, safi_t 
 static void delete_marked_cache_groups(void);
 static void delete_cache(void* value);
 static void delete_cache_group(void* _cache_group);
+void install_cli_commands(void);
+static int rpki_config_write (struct vty * vty);
+static void overwrite_exit_commands(void);
 /*****************************************/
 /** Declaration of private functions    **/
 /*****************************************/
@@ -674,6 +679,95 @@ delete_cache_group(void* _cache_group)
   cache_group* group = _cache_group;
   list_delete(group->cache_config_list);
   XFREE(MTYPE_BGP_RPKI_CACHE_GROUP, group);
+}
+static int
+rpki_config_write(struct vty * vty)
+{
+  struct listnode *cache_group_node;
+  cache_group* cache_group;
+  if (listcount(cache_group_list))
+    {
+      if (rpki_debug)
+        {
+          vty_out(vty, "debug rpki%s", VTY_NEWLINE);
+        }
+      vty_out(vty, "! %s", VTY_NEWLINE);
+      vty_out(vty, "enable-rpki%s", VTY_NEWLINE);
+      vty_out(vty, "  rpki polling_period %d %s", polling_period, VTY_NEWLINE);
+      vty_out(vty, "  rpki timeout %d %s", timeout, VTY_NEWLINE);
+      vty_out(vty, "  rpki initial-synchronisation-timeout %d %s",
+          initial_synchronisation_timeout, VTY_NEWLINE);
+      vty_out(vty, "! %s", VTY_NEWLINE);
+      for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group)
+          )
+        {
+          struct list* cache_list = cache_group->cache_config_list;
+          struct listnode* cache_node;
+          cache* cache;
+          vty_out(vty, "  rpki group %d %s", cache_group->preference_value,
+              VTY_NEWLINE);
+          if (listcount(cache_list) == 0)
+            {
+              vty_out(vty, "! %s", VTY_NEWLINE);
+              continue;
+            }
+          for (ALL_LIST_ELEMENTS_RO(cache_list, cache_node, cache))
+            {
+              switch (cache->type)
+                {
+                struct tr_tcp_config* tcp_config;
+                struct tr_ssh_config* ssh_config;
+              case TCP:
+                tcp_config = cache->tr_config.tcp_config;
+                vty_out(vty, "    rpki cache %s %s %s", tcp_config->host,
+                    tcp_config->port, VTY_NEWLINE);
+                break;
+
+              case SSH:
+                ssh_config = cache->tr_config.ssh_config;
+                vty_out(vty, "    rpki cache %s %u %s %s %s %s",
+                    ssh_config->host, ssh_config->port, ssh_config->username,
+                    ssh_config->client_privkey_path,
+                    ssh_config->server_hostkey_path != NULL ?
+                        ssh_config->server_hostkey_path : " ", VTY_NEWLINE);
+                break;
+
+              default:
+                break;
+              }
+          }
+        vty_out(vty, "! %s", VTY_NEWLINE);
+      }
+    return 1;
+  }
+else
+  {
+    return 0;
+  }
+}
+static void
+overwrite_exit_commands()
+{
+  unsigned int i;
+  vector cmd_vector = rpki_node.cmd_vector;
+  for (i = 0; i < cmd_vector->active; ++i)
+  {
+    struct cmd_element* cmd = (struct cmd_element*) vector_lookup(cmd_vector, i);
+    if (strcmp(cmd->string, "exit") == 0 || strcmp(cmd->string, "quit") == 0
+        || strcmp(cmd->string, "exit") == 0)
+      {
+        vector_unset(cmd_vector, i);
+      }
+  }
+  /*
+   The comments in the following 3 lines must not be removed.
+   They prevent the script ../vtysh/extract.pl from copying the lines
+   into ../vtysh/vtysh_cmd.c which would cause the commands to be ambiguous
+   and we don't want that.
+   */
+  install_element(RPKI_NODE /*DO NOT REMOVE THIS COMMENT*/, &rpki_exit_cmd);
+  install_element(RPKI_NODE /*DO NOT REMOVE THIS COMMENT*/, &rpki_quit_cmd);
+  install_element(RPKI_NODE /*DO NOT REMOVE THIS COMMENT*/, &rpki_end_cmd);
 }
 void
 install_cli_commands()
