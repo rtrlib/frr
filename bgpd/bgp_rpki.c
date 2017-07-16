@@ -890,7 +890,7 @@ rpki_config_write(struct vty * vty)
           vty_out(vty, "debug rpki%s", VTY_NEWLINE);
         }
       vty_out(vty, "! %s", VTY_NEWLINE);
-      vty_out(vty, "enable-rpki%s", VTY_NEWLINE);
+      vty_out(vty, "rpki%s", VTY_NEWLINE);
       vty_out(vty, "  rpki polling_period %d %s", polling_period, VTY_NEWLINE);
       vty_out(vty, "  rpki timeout %d %s", timeout, VTY_NEWLINE);
       vty_out(vty, "  rpki initial-synchronisation-timeout %d %s",
@@ -991,9 +991,9 @@ add_ssh_cache(struct list* cache_list, const char* host,
   listnode_add(cache_list, cache_p);
   return SUCCESS;
 }
-DEFUN (enable_rpki,
-    enable_rpki_cmd,
-    "enable-rpki",
+DEFUN (rpki,
+    rpki_cmd,
+    "rpki",
     BGP_STR
     "Enable rpki and enter rpki configuration mode\n")
 {
@@ -1216,9 +1216,11 @@ DEFUN (rpki_cache,
     {
       return_value = add_tcp_cache(
           currently_selected_cache_group->cache_config_list, argv[2]->arg, argv[3]->arg);
+      vty_out(vty, "TEMPORARY RPKI DBUGMSG: Added TCP cache to group%s", VTY_NEWLINE);
     }
   else
     {
+      vty_out(vty, "Could not read incomplete command%s", VTY_NEWLINE);
       return CMD_ERR_INCOMPLETE;
     }
   if (return_value == ERROR)
@@ -1336,82 +1338,82 @@ DEFUN (no_bgp_bestpath_prefix_validate_allow_invalid,
   return CMD_SUCCESS;
 }
 
-//DEFUN (show_rpki_prefix_table,
-//    show_rpki_prefix_table_cmd,
-//    "show rpki prefix-table",
-//    SHOW_STR
-//    RPKI_OUTPUT_STRING
-//    "Show validated prefixes which were received from RPKI Cache")
-//{
-//  if (rpki_is_synchronized())
-//    {
-//      rpki_print_prefix_table(vty);
-//    }
-//  else
-//    {
-//      vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
-//    }
-//  return CMD_SUCCESS;
-//}
-//
-//DEFUN (show_rpki_cache_connection,
-//    show_rpki_cache_connection_cmd,
-//    "show rpki cache-connection",
-//    SHOW_STR
-//    RPKI_OUTPUT_STRING
-//    "Show to which RPKI Cache Servers we have a connection")
-//{
-//  if (rpki_is_synchronized())
-//    {
-//      struct listnode *cache_group_node;
-//      cache_group* cache_group;
-//      int group = rpki_get_connected_group();
-//      if (group == -1)
-//        {
-//          vty_out(vty, "Cannot find a connected group. %s", VTY_NEWLINE);
-//          return CMD_SUCCESS;
-//        }
-//      vty_out(vty, "Connected to group %d %s", group, VTY_NEWLINE);
-//      for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group))
-//        {
-//          if (cache_group->preference_value == group)
-//            {
-//              struct list* cache_list = cache_group->cache_config_list;
-//              struct listnode* cache_node;
-//              cache* cache;
-//
-//              for (ALL_LIST_ELEMENTS_RO(cache_list, cache_node, cache))
-//                {
-//                  switch (cache->type)
-//                    {
-//                    struct tr_tcp_config* tcp_config;
-//                    struct tr_ssh_config* ssh_config;
-//                  case TCP:
-//                    tcp_config = cache->tr_config.tcp_config;
-//                    vty_out(vty, "rpki cache %s %s %s", tcp_config->host,
-//                        tcp_config->port, VTY_NEWLINE);
-//                    break;
-//
-//                  case SSH:
-//                    ssh_config = cache->tr_config.ssh_config;
-//                    vty_out(vty, "  rpki cache %s %u %s", ssh_config->host,
-//                        ssh_config->port, VTY_NEWLINE);
-//                    break;
-//
-//                  default:
-//                    break;
-//                  }
-//              }
-//          }
-//      }
-//  }
-//  else
-//  {
-//    vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
-//  }
-//
-//  return CMD_SUCCESS;
-//}
+DEFUN (show_rpki_prefix_table,
+    show_rpki_prefix_table_cmd,
+    "show rpki prefix-table",
+    SHOW_STR
+    RPKI_OUTPUT_STRING
+    "Show validated prefixes which were received from RPKI Cache")
+{
+  if (rpki_is_synchronized())
+    {
+      rpki_print_prefix_table(vty);
+    }
+  else
+    {
+      vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
+    }
+  return CMD_SUCCESS;
+}
+
+DEFUN (show_rpki_cache_connection,
+    show_rpki_cache_connection_cmd,
+    "show rpki cache-connection",
+    SHOW_STR
+    RPKI_OUTPUT_STRING
+    "Show to which RPKI Cache Servers we have a connection")
+{
+  if (rpki_is_synchronized())
+    {
+      struct listnode *cache_group_node;
+      cache_group* cache_group;
+      int group = rpki_get_connected_group();
+      if (group == -1)
+        {
+          vty_out(vty, "Cannot find a connected group. %s", VTY_NEWLINE);
+          return CMD_SUCCESS;
+        }
+      vty_out(vty, "Connected to group %d %s", group, VTY_NEWLINE);
+      for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group))
+        {
+          if (cache_group->preference_value == group)
+            {
+              struct list* cache_list = cache_group->cache_config_list;
+              struct listnode* cache_node;
+              cache* cache;
+
+              for (ALL_LIST_ELEMENTS_RO(cache_list, cache_node, cache))
+                {
+                  switch (cache->type)
+                    {
+                    struct tr_tcp_config* tcp_config;
+                    struct tr_ssh_config* ssh_config;
+                  case TCP:
+                    tcp_config = cache->tr_config.tcp_config;
+                    vty_out(vty, "rpki cache %s %s %s", tcp_config->host,
+                        tcp_config->port, VTY_NEWLINE);
+                    break;
+
+                  case SSH:
+                    ssh_config = cache->tr_config.ssh_config;
+                    vty_out(vty, "  rpki cache %s %u %s", ssh_config->host,
+                        ssh_config->port, VTY_NEWLINE);
+                    break;
+
+                  default:
+                    break;
+                  }
+              }
+          }
+      }
+  }
+  else
+  {
+    vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
+  }
+
+  return CMD_SUCCESS;
+}
 DEFUN (rpki_exit,
     rpki_exit_cmd,
     "exit",
@@ -1493,7 +1495,7 @@ install_cli_commands()
   install_node(&rpki_node, rpki_config_write);
   install_default(RPKI_NODE);
   overwrite_exit_commands();
-  install_element(CONFIG_NODE, &enable_rpki_cmd);
+  install_element(CONFIG_NODE, &rpki_cmd);
 
   /* Install rpki polling period commands */
   install_element(RPKI_NODE, &rpki_polling_period_cmd);
@@ -1528,12 +1530,8 @@ install_cli_commands()
   install_element(BGP_NODE, &no_bgp_bestpath_prefix_validate_allow_invalid_cmd);
 
   /* Install show commands */
-  //install_element(VIEW_NODE, &show_rpki_prefix_table_cmd);
-  //install_element(VIEW_NODE, &show_rpki_cache_connection_cmd);
-  //install_element(RESTRICTED_NODE, &show_rpki_prefix_table_cmd);
-  //install_element(RESTRICTED_NODE, &show_rpki_cache_connection_cmd);
-  //install_element(ENABLE_NODE, &show_rpki_prefix_table_cmd);
-  //install_element(ENABLE_NODE, &show_rpki_cache_connection_cmd);
+  install_element(ENABLE_NODE, &show_rpki_prefix_table_cmd);
+  install_element(ENABLE_NODE, &show_rpki_cache_connection_cmd);
 
   /* Install debug commands */
   install_element(CONFIG_NODE, &debug_rpki_cmd);
