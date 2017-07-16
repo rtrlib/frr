@@ -102,6 +102,8 @@ static void delete_cache_group(void* _cache_group);
 /*****************************************/
 void free_rtr_mgr_groups(struct rtr_mgr_group* group, int length);
 struct rtr_mgr_group* get_rtr_mgr_groups(void);
+unsigned int get_number_of_cache_groups(void);
+void delete_cache_group_list(void);
 
 //static void list_all_nodes(struct vty *vty, const struct trie_node* node, unsigned int* count);
 //static void print_record(struct vty *vty, const struct trie_node* node);
@@ -223,6 +225,19 @@ get_rtr_mgr_groups()
     return NULL ;
   }
   return rtr_mgr_groups;
+}
+
+unsigned int
+get_number_of_cache_groups()
+{
+  delete_marked_cache_groups();
+  return listcount(cache_group_list);
+}
+
+void
+delete_cache_group_list()
+{
+  list_delete(cache_group_list);
 }
 
 inline void
