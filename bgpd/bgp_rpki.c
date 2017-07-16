@@ -308,8 +308,8 @@ print_record(struct vty *vty, const struct trie_node* node)
   for (i = 0; i < data->len; ++i)
     {
       lrtr_ip_addr_to_str(&(node->prefix), ip, sizeof(ip));
-      vty_out(vty, "%-40s   %3u - %3u   %10u %s", ip, node->len,
-          data->ary[i].max_len, data->ary[i].asn, VTY_NEWLINE);
+      vty_out(vty, "%-40s   %3u - %3u   %10u\n", ip, node->len,
+          data->ary[i].max_len, data->ary[i].asn);
     }
 }
 
@@ -619,9 +619,8 @@ rpki_print_prefix_table(struct vty *vty)
   unsigned int number_of_ipv4_prefixes = 0;
   unsigned int number_of_ipv6_prefixes = 0;
   struct pfx_table* pfx_table = rtr_config->groups[0].sockets[0]->pfx_table;
-  vty_out(vty, "RPKI/RTR prefix table%s", VTY_NEWLINE);
-  vty_out(vty, "%-40s %s  %s %s", "Prefix", "Prefix Length", "Origin-AS",
-      VTY_NEWLINE);
+  vty_out(vty, "RPKI/RTR prefix table\n");
+  vty_out(vty, "%-40s %s  %s \n", "Prefix", "Prefix Length", "Origin-AS");
   if (pfx_table->ipv4 != NULL )
     {
       list_all_nodes(vty, pfx_table->ipv4, &number_of_ipv4_prefixes);
@@ -630,10 +629,8 @@ rpki_print_prefix_table(struct vty *vty)
     {
       list_all_nodes(vty, pfx_table->ipv6, &number_of_ipv6_prefixes);
     }
-  vty_out(vty, "Number of IPv4 Prefixes: %u %s", number_of_ipv4_prefixes,
-      VTY_NEWLINE);
-  vty_out(vty, "Number of IPv6 Prefixes: %u %s", number_of_ipv6_prefixes,
-      VTY_NEWLINE);
+  vty_out(vty, "Number of IPv4 Prefixes: %u \n", number_of_ipv4_prefixes);
+  vty_out(vty, "Number of IPv6 Prefixes: %u \n", number_of_ipv6_prefixes);
 }
 
 void
@@ -887,26 +884,25 @@ rpki_config_write(struct vty * vty)
     {
       if (rpki_debug)
         {
-          vty_out(vty, "debug rpki%s", VTY_NEWLINE);
+          vty_out(vty, "debug rpki\n");
         }
-      vty_out(vty, "! %s", VTY_NEWLINE);
-      vty_out(vty, "rpki%s", VTY_NEWLINE);
-      vty_out(vty, "  rpki polling_period %d %s", polling_period, VTY_NEWLINE);
-      vty_out(vty, "  rpki timeout %d %s", timeout, VTY_NEWLINE);
-      vty_out(vty, "  rpki initial-synchronisation-timeout %d %s",
-          initial_synchronisation_timeout, VTY_NEWLINE);
-      vty_out(vty, "! %s", VTY_NEWLINE);
+      vty_out(vty, "! \n");
+      vty_out(vty, "rpki\n");
+      vty_out(vty, "  rpki polling_period %d \n", polling_period);
+      vty_out(vty, "  rpki timeout %d \n", timeout);
+      vty_out(vty, "  rpki initial-synchronisation-timeout %d \n",
+          initial_synchronisation_timeout);
+      vty_out(vty, "! \n");
       for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group)
           )
         {
           struct list* cache_list = cache_group->cache_config_list;
           struct listnode* cache_node;
           cache* cache;
-          vty_out(vty, "  rpki group %d %s", cache_group->preference_value,
-              VTY_NEWLINE);
+          vty_out(vty, "  rpki group %d \n", cache_group->preference_value);
           if (listcount(cache_list) == 0)
             {
-              vty_out(vty, "! %s", VTY_NEWLINE);
+              vty_out(vty, "! \n");
               continue;
             }
           for (ALL_LIST_ELEMENTS_RO(cache_list, cache_node, cache))
@@ -917,24 +913,24 @@ rpki_config_write(struct vty * vty)
                 struct tr_ssh_config* ssh_config;
               case TCP:
                 tcp_config = cache->tr_config.tcp_config;
-                vty_out(vty, "    rpki cache %s %s %s", tcp_config->host,
-                    tcp_config->port, VTY_NEWLINE);
+                vty_out(vty, "    rpki cache %s %s \n", tcp_config->host,
+                    tcp_config->port);
                 break;
 
               case SSH:
                 ssh_config = cache->tr_config.ssh_config;
-                vty_out(vty, "    rpki cache %s %u %s %s %s %s",
+                vty_out(vty, "    rpki cache %s %u %s %s %s \n",
                     ssh_config->host, ssh_config->port, ssh_config->username,
                     ssh_config->client_privkey_path,
                     ssh_config->server_hostkey_path != NULL ?
-                        ssh_config->server_hostkey_path : " ", VTY_NEWLINE);
+                        ssh_config->server_hostkey_path : " ");
                 break;
 
               default:
                 break;
               }
           }
-        vty_out(vty, "! %s", VTY_NEWLINE);
+        vty_out(vty, "! \n");
       }
     return 1;
   }
@@ -1134,7 +1130,7 @@ DEFUN (rpki_group,
       if ((new_cache_group = create_cache_group(group_preference)) == NULL )
         {
           vty_out(vty, "Could not create new rpki cache group because "
-              "of memory allocation error%s", VTY_NEWLINE);
+              "of memory allocation error\n");
           return CMD_WARNING;
         }
       listnode_add(cache_group_list, new_cache_group);
@@ -1161,8 +1157,8 @@ DEFUN (no_rpki_group,
   cache_group = find_cache_group(group_preference);
   if (cache_group == NULL )
     {
-      vty_out(vty, "There is no cache group with preference value %d%s",
-          group_preference, VTY_NEWLINE);
+      vty_out(vty, "There is no cache group with preference value %d\n",
+          group_preference);
       return CMD_WARNING;
     }
   cache_group->delete_flag = 1;
@@ -1186,12 +1182,12 @@ DEFUN (rpki_cache,
   if (list_isempty(cache_group_list))
     {
       vty_out(vty, "Cannot create new rpki cache because "
-          "no cache group is defined.%s", VTY_NEWLINE);
+          "no cache group is defined.\n");
       return CMD_WARNING;
     }
   if (currently_selected_cache_group == NULL )
     {
-      vty_out(vty, "No cache group is selected%s", VTY_NEWLINE);
+      vty_out(vty, "No cache group is selected\n");
       return CMD_WARNING;
     }
   // use ssh connection
@@ -1216,17 +1212,17 @@ DEFUN (rpki_cache,
     {
       return_value = add_tcp_cache(
           currently_selected_cache_group->cache_config_list, argv[2]->arg, argv[3]->arg);
-      vty_out(vty, "TEMPORARY RPKI DBUGMSG: Added TCP cache to group%s", VTY_NEWLINE);
+      vty_out(vty, "TEMPORARY RPKI DBUGMSG: Added TCP cache to group\n");
     }
   else
     {
-      vty_out(vty, "Could not read incomplete command%s", VTY_NEWLINE);
+      vty_out(vty, "Could not read incomplete command\n");
       return CMD_ERR_INCOMPLETE;
     }
   if (return_value == ERROR)
     {
       vty_out(vty, "Could not create new rpki cache because "
-          "of memory allocation error%s", VTY_NEWLINE);
+          "of memory allocation error\n");
       return CMD_WARNING;
     }
   return CMD_SUCCESS;
@@ -1248,7 +1244,7 @@ DEFUN (no_rpki_cache,
     }
   if (currently_selected_cache_group == NULL )
     {
-      vty_out(vty, "No cache group is selected%s", VTY_NEWLINE);
+      vty_out(vty, "No cache group is selected\n");
       return CMD_WARNING;
     }
   if (argc == 2)
@@ -1272,7 +1268,7 @@ DEFUN (no_rpki_cache,
     }
   if (cache == NULL )
     {
-      vty_out(vty, "Cannot find cache %s%s", argv[3]->arg, VTY_NEWLINE);
+      vty_out(vty, "Cannot find cache %s\n", argv[3]->arg);
       return CMD_WARNING;
     }
   cache->delete_flag = 1;
@@ -1351,7 +1347,7 @@ DEFUN (show_rpki_prefix_table,
     }
   else
     {
-      vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
+      vty_out(vty, "No connection to RPKI cache server.\n");
     }
   return CMD_SUCCESS;
 }
@@ -1370,10 +1366,10 @@ DEFUN (show_rpki_cache_connection,
       int group = rpki_get_connected_group();
       if (group == -1)
         {
-          vty_out(vty, "Cannot find a connected group. %s", VTY_NEWLINE);
+          vty_out(vty, "Cannot find a connected group. \n");
           return CMD_SUCCESS;
         }
-      vty_out(vty, "Connected to group %d %s", group, VTY_NEWLINE);
+      vty_out(vty, "Connected to group %d \n", group);
       for (ALL_LIST_ELEMENTS_RO(cache_group_list, cache_group_node, cache_group))
         {
           if (cache_group->preference_value == group)
@@ -1390,14 +1386,14 @@ DEFUN (show_rpki_cache_connection,
                     struct tr_ssh_config* ssh_config;
                   case TCP:
                     tcp_config = cache->tr_config.tcp_config;
-                    vty_out(vty, "rpki cache %s %s %s", tcp_config->host,
-                        tcp_config->port, VTY_NEWLINE);
+                    vty_out(vty, "rpki cache %s %s \n", tcp_config->host,
+                        tcp_config->port);
                     break;
 
                   case SSH:
                     ssh_config = cache->tr_config.ssh_config;
-                    vty_out(vty, "  rpki cache %s %u %s", ssh_config->host,
-                        ssh_config->port, VTY_NEWLINE);
+                    vty_out(vty, "  rpki cache %s %u \n", ssh_config->host,
+                        ssh_config->port);
                     break;
 
                   default:
@@ -1409,7 +1405,7 @@ DEFUN (show_rpki_cache_connection,
   }
   else
   {
-    vty_out(vty, "No connection to RPKI cache server.%s", VTY_NEWLINE);
+    vty_out(vty, "No connection to RPKI cache server.\n");
   }
 
   return CMD_SUCCESS;
