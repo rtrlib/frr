@@ -26,6 +26,5 @@
 
 void install_cli_commands();
 unsigned int get_number_of_cache_groups();
-void delete_cache_group_list();
 
 #endif /* RPKI_COMMANDS_H_ */
