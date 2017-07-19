@@ -176,15 +176,12 @@ struct bgp_info {
 
 	u_short instance;
 
-<<<<<<< HEAD
-  /*RPKI Route origin validation status*/
-  u_char rpki_validation_status;
+	/*RPKI Route origin validation status*/
+	u_char rpki_validation_status;
 
-=======
 	/* Addpath identifiers */
 	u_int32_t addpath_rx_id;
 	u_int32_t addpath_tx_id;
->>>>>>> upstream/master
 };
 
 /* Structure used in BGP path selection */
