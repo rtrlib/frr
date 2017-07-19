@@ -126,6 +126,10 @@ struct zebra_privs_t bgpd_privs =
 
 static struct frr_daemon_info bgpd_di;
 
+/* Hooks */
+
+DEFINE_HOOK ( bgp_deinit, (), ())
+
 /* SIGHUP handler. */
 void 
 sighup (void)
@@ -183,6 +187,8 @@ bgp_exit (int status)
 
   /* it only makes sense for this to be called on a clean exit */
   assert (status == 0);
+
+  hook_call(bgp_deinit, 0);
 
   bfd_gbl_exit();
 
