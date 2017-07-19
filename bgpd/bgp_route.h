@@ -23,6 +23,7 @@
 
 #include "queue.h"
 #include "bgp_table.h"
+#include "hook.h"
 
 struct bgp_nexthop_cache;
 struct bgp_route_evpn;
@@ -276,6 +277,10 @@ struct bgp_static {
 #define PATH_ADDPATH_STR_BUFFER PREFIX2STR_BUFFER + 32
 
 enum bgp_path_type { BGP_PATH_ALL, BGP_PATH_BESTPATH, BGP_PATH_MULTIPATH };
+
+DECLARE_HOOK (rpki_set_validation_status,
+             (struct bgp* bgp, struct bgp_info* bgp_info, struct prefix* prefix),
+             (bgp, bgp_info, prefix))
 
 static inline void bgp_bump_version(struct bgp_node *node)
 {

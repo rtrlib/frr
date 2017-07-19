@@ -21,6 +21,7 @@
 #ifndef _QUAGGA_BGPD_H
 #define _QUAGGA_BGPD_H
 
+#include "hook.h"
 #include "qobj.h"
 #include "lib/json.h"
 #include "vrf.h"
@@ -1175,6 +1176,10 @@ typedef enum {
 
 extern struct bgp_master *bm;
 extern unsigned int multipath_num;
+
+/* Hooks */
+DECLARE_HOOK ( bgp_deinit, (), ())
+
 
 /* Prototypes. */
 extern void bgp_terminate(void);

@@ -78,6 +78,10 @@
 extern const char *bgp_origin_str[];
 extern const char *bgp_origin_long_str[];
 
+DEFINE_HOOK (rpki_set_validation_status,
+             (struct bgp* bgp, struct bgp_info* bgp_info, struct prefix* prefix),
+             (bgp, bgp_info, prefix))
+
 struct bgp_node *bgp_afi_node_get(struct bgp_table *table, afi_t afi,
 				  safi_t safi, struct prefix *p,
 				  struct prefix_rd *prd)
@@ -2010,6 +2014,8 @@ static wq_item_status bgp_process_main(struct work_queue *wq, void *data)
 	struct bgp_info *new_select;
 	struct bgp_info *old_select;
 	struct bgp_info_pair old_and_new;
+
+	hook_call(rpki_set_validation_status, bgp, rn->info, p);
 
 	/* Is it end of initial update? (after startup) */
 	if (!rn) {
