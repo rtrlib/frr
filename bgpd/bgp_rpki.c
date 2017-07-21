@@ -553,6 +553,7 @@ rpki_init_sync_socket()
 static int
 bgp_rpki_init(struct thread_master *master)
 {
+  rpki_init_sync_socket();
   rpki_debug = 0;
   rtr_is_running = 0;
   polling_period = POLLING_PERIOD_DEFAULT;
@@ -567,7 +568,6 @@ static int
 bgp_rpki_module_init(void)
 {
   hook_register(frr_late_init, bgp_rpki_init);
-  rpki_init_sync_socket();
   return 0;
 }
 
