@@ -476,7 +476,7 @@ revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix)
           if (status_changed)
             {
               int ret;
-              struct bgp_adj_in *ain;
+              /*struct bgp_adj_in *ain;
                 for (ain = bgp_node->adj_in; ain; ain = ain->next){
                   struct bgp_info *ri = bgp_node->info;
                   u_char *tag = (ri && ri->extra) ? ri->extra->tag : NULL;
@@ -488,7 +488,7 @@ revalidate_prefix(struct bgp* bgp, afi_t afi, struct prefix *prefix)
                  	bgp_unlock_node (bgp_node);
                     return;
                   }
-                }
+                }*/
             }
         }
     }
@@ -535,8 +535,6 @@ update_cb(struct pfx_table* p __attribute__ ((unused)), const struct pfx_record 
         }
     }
 }
-static int
-bgp_rpki_init(struct thread_master *master)
 void
 rpki_init_sync_socket()
 {
@@ -549,11 +547,11 @@ rpki_init_sync_socket()
   rpki_sync_socket_rtr = fds[0];
   rpki_sync_socket_bgpd = fds[1];
   fcntl(rpki_sync_socket_rtr, F_SETFL, O_NONBLOCK);
-  thread_add_read(bm->master, rpki_update_cb_sync_bgpd, 0, rpki_sync_socket_bgpd);
+  thread_add_read(bm->master, rpki_update_cb_sync_bgpd, 0, rpki_sync_socket_bgpd, NULL);
 }
 
-void
-rpki_init(void)
+static int
+bgp_rpki_init(struct thread_master *master)
 {
   rpki_debug = 0;
   rtr_is_running = 0;
@@ -842,7 +840,7 @@ static int
 rpki_update_cb_sync_bgpd(struct thread *thread)
 {
   struct pfx_record *rec;
-  thread_add_read(bm->master, rpki_update_cb_sync_bgpd, 0, rpki_sync_socket_bgpd);
+  thread_add_read(bm->master, rpki_update_cb_sync_bgpd, 0, rpki_sync_socket_bgpd, NULL);
   int rtval = read(rpki_sync_socket_bgpd, &rec, sizeof(struct pfx_record *));
   if(rtval < 1)
     {
