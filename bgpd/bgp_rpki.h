@@ -1,5 +1,10 @@
 /* BGP RPKI
  * Copyright (C) 2013 Michael Mester (m.mester@fu-berlin.de)
+ * Nils Bars (nils.bars@haw-hamburg.de) of Hamburg University of Applied Sciences
+ * Fabian Holler (inet@fholler.de) of Hamburg University of Applied Sciences
+ * Andreas Reuter (andreas.reuter@fu-berlin.de) of Freie Universität Berlin
+ * Marcel Röthke (marcel.roethke@haw-hamburg.de) of Hamburg University of Applied Sciences
+ * Colin Sames (colin.sames@haw-hamburg.de) of Hamburg University of Applied Sciences
  *
  * This file is part of Quagga
  *
